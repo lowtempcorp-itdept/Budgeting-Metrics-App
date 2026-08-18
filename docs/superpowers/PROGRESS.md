@@ -117,6 +117,23 @@ phase:
     monthly subscriptions (e.g. gym) accounted for automatically, not
     re-entered every period. No such concept exists yet (`income`/
     `expenses` are one-off transaction rows only).
+- **Basis file analyzed** (2026-08-18): the user shared their real current
+  tracker, `Budgeting Metrics.xlsx` (local to this machine only, not in the
+  repo). Confirmed the existing schema matches their real accounts/
+  categories/portfolio structure. New findings for the next plan: (1) they
+  build **per-account** pie charts (Cash/GCash/Debit/Maribank), not just
+  per-category — support that breakdown, not just category; (2) their
+  hand-written "6-Month Summary" sheet has a prose "Key Insights" section
+  (highest spend month, over-budget months, recurring categories, one-off
+  anomalies) that's a strong candidate for an **auto-generated insights
+  panel**; (3) category names drift release-to-release in the raw sheet
+  (`Errands` vs `Errands Expense`, `Hotel` vs `Hotel Expenses`) — real
+  evidence the fixed `categories` table (Task 3) is the right call; (4) open
+  question: the sheet has a manual **account-balance reconciliation**
+  concept ("counted on Sept 23") with no schema equivalent yet — decide in
+  the next plan whether balances should be a stored snapshot or purely
+  derived from transactions. Full structural breakdown (not the raw
+  financial data) is in the cross-session memory system, not this repo.
 
 ## How to resume in a new session
 
