@@ -210,34 +210,44 @@ is in the cross-session memory system, not this repo.
 ## How to resume in a new session
 
 The foundation plan is done and live. The Transactions core sub-project's
-code is done (see above) — what's left is a human doing two things, then
-a final review + merge:
+code is done, whole-branch-reviewed (opus, one fix-and-re-review round —
+see `git log` on `worktree-transactions-core` for the full 16-commit
+history), and pushed to `origin/worktree-transactions-core`. Not merged
+to `main` — merging now would break the live app, since `main` auto-
+deploys to Vercel on every push and the migration below hasn't been
+applied to the one live Supabase project yet.
+
+**Open a PR** (no `gh` CLI available in the session that got this far —
+next session, either run `gh pr create --base main --head
+worktree-transactions-core` or open
+`https://github.com/lowtempcorp-itdept/Budgeting-Metrics-App/compare/main...worktree-transactions-core?expand=1`
+directly) and then, before merging that PR:
 
 1. **Apply the migration.** Supabase dashboard → SQL Editor → New query →
    paste the full contents of
    `supabase/migrations/0004_transactions_core.sql` (on branch
    `worktree-transactions-core`) → Run. Expect "Success. No rows
    returned." No agent this far has had dashboard access to do this step
-   itself.
+   itself. Once applied, every screen in this branch that hits a real bug
+   will now show a visible error page (final-review fix) instead of
+   silently rendering as empty/₱0.00 — if you see that error page after
+   applying the migration, something about the migration didn't take
+   cleanly and it's worth investigating before doing anything else below.
 2. **Run the manual verification steps the plan called for but couldn't
    be run live**, now that the schema exists: Task 6 step 4, Task 7 step
    4, Task 8 step 4, and Task 9 (all in
    `docs/superpowers/plans/2026-08-18-transactions-core.md`) — quick-add
-   sheet from every screen, archive/unarchive round-trip, transaction
+   sheet from every screen (including an income-side balance adjustment,
+   which the final review found and fixed as write-unreachable — worth
+   deliberately testing), archive/unarchive round-trip, transaction
    create/edit/delete round-trip, filter round-trip, mobile viewport
    check. Delete any test data created along the way through the UI
    (only one Supabase environment — never leave test rows behind).
-3. Once verified (or if a bug turns up — fix, re-verify, commit), resume
-   with a fresh session: `EnterWorktree` with
-   `path: ".claude/worktrees/transactions-core"` (recreate with
-   `EnterWorktree({ name: "transactions-core" })` + `git merge
-   origin/worktree-transactions-core --ff-only` if the local directory
-   was removed), then superpowers:subagent-driven-development with the
-   plan file — it'll find the completed ledger... actually the ledger is
-   gitignored scratch and gets deleted at the end of a clean run; if it's
-   gone, just proceed straight to the final whole-branch review via
-   superpowers:requesting-code-review, then
-   superpowers:finishing-a-development-branch to merge.
+3. If a bug turns up: fix it, re-verify, commit, push again. Once clean,
+   merge the PR. After merging, delete the SDD ledger workspace
+   (`.superpowers/sdd/2026-08-18-transactions-core/`, gitignored scratch,
+   not yet deleted as of this note since the branch isn't merged) and
+   change this section's heading from CODE COMPLETE to ✅ COMPLETE.
 4. Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio,
    Historical migration) are still unscoped — see "Product direction for
    the NEXT plan" below.
