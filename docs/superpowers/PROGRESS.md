@@ -1,0 +1,121 @@
+# Project Progress
+
+> Read this first in any new session on this repo. It's committed to git so
+> it survives a fresh clone — unlike `.superpowers/sdd/` (gitignored scratch
+> that resets every session). Keep this under ~300 lines: prune completed
+> detail, keep it a living summary, not a full log.
+
+## What this is
+
+A private, single-user Next.js + Supabase personal finance tracker (income,
+expenses, budgets, portfolio). Design spec:
+`docs/superpowers/specs/2026-08-18-personal-finance-app-design.md`.
+
+## Current plan: Foundation
+
+Plan file: `docs/superpowers/plans/2026-08-18-foundation.md`
+Branch: `foundation-plan` (working directly on it, no worktree — matches how
+this branch has been worked since Task 1)
+Executing with: superpowers:subagent-driven-development
+SDD workspace: `.superpowers/sdd/2026-08-18-foundation/` (gitignored scratch —
+ledger, briefs, reports, review packages; safe to `rm -rf` once the plan is
+fully merged)
+
+Goal: deployed, installable, login-protected PWA shell with the full DB
+schema in place. Intentionally stops at placeholder pages — the real
+budgeting/transactions/portfolio UI is a separate, later plan.
+
+### Task status (as of 2026-08-18)
+
+1. ✅ Scaffold (Next.js/Tailwind/Vitest/formatCurrency) — commit `f1a36fe`
+2. ✅ Supabase client helpers + connection check — commit `3e9ab97`
+3. ✅ accounts/categories schema + RLS — commit `8075ff8`, reviewed clean
+4. ✅ income/expenses/budgets/portfolio_transactions schema + RLS — commits
+   `567c902..9980e94`, reviewed clean (2 minor deferred, see ledger)
+5. ✅ Login page + real user account — commits `9980e94..faf8d21`, reviewed
+   clean (1 minor deferred). Real auth user:
+   `lowtempcorp.it@gmail.com` in the Supabase project.
+6. ✅ Route protection proxy (`proxy.ts`) — commits `faf8d21..ecb0e88`.
+   **Found and fixed a real bug in the plan's own sample code**: redirect
+   branches dropped refreshed session cookies (`@supabase/ssr` pitfall).
+   Fixed by copying `response.cookies` onto redirect responses. The plan
+   *document* was not edited — if re-run from scratch, re-catch this.
+7. ✅ Seed script (4 accounts, 22 categories) — commit `1915870`. Idempotency
+   verified (second run correctly skips).
+8. ⬜ PWA shell (manifest + service worker)
+9. ⬜ Mobile nav shell + placeholder screens
+10. ⬜ GitHub push + Vercel deploy — **note: GitHub push already effectively
+    done** (this repo already lives at
+    `https://github.com/lowtempcorp-itdept/Budgeting-Metrics-App.git`,
+    branch `foundation-plan` pushed) — Task 10 remaining work is Vercel
+    connection + prod verification + auto-deploy confirmation.
+- ⬜ Final whole-branch review (after Task 10)
+
+Full per-task findings, fix-round history, and parked/deferred minors live in
+`.superpowers/sdd/2026-08-18-foundation/progress.md` (the SDD ledger) — that
+file is gitignored scratch, so it will be **gone** in a fresh clone. This
+summary is the durable record; the ledger is the working detail while the
+plan is actively in flight in one continuous session.
+
+## Live infrastructure
+
+- Supabase project ref: `gltervcqdojzpbssovrb`
+  (`https://gltervcqdojzpbssovrb.supabase.co`)
+- `.env.local` (gitignored, recreate from Supabase dashboard → Project
+  Settings → API if missing): `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+  `SEED_USER_EMAIL=lowtempcorp.it@gmail.com`
+- `.claude/launch.json` — lets the Browser tool run `npm run dev` on :3000
+  for manual UI checks without a human starting the server by hand.
+- GitHub: `lowtempcorp-itdept/Budgeting-Metrics-App`, branch `foundation-plan`
+  (not yet merged to `main`; Vercel not yet connected as of Task 7).
+
+## Decisions / conventions worth knowing
+
+- No git worktree for this plan — working directly on `foundation-plan`
+  checkout, matches how Tasks 1-3 were originally done.
+- Manual dashboard steps (creating the Supabase project, applying SQL
+  migrations, creating the auth user) are done by the human on request —
+  the controller/agents don't have dashboard login access. The controller
+  verifies the *result* live afterward using the anon/service-role keys.
+- Passwords are never handled by the agent — the human tests login flows
+  themselves in the browser when a real password is needed.
+
+## Product direction for the NEXT plan (post-foundation)
+
+Not yet scoped into a plan doc — captured here plus in the cross-session
+memory system so it isn't lost. Bring this into that plan's brainstorming
+phase:
+
+- **Core motivation**: current Google Sheets tracking doesn't get updated
+  regularly because the spreadsheet UI doesn't invite regular use. The real
+  budgeting/transactions/portfolio screens should be materially more
+  inviting to open daily than a spreadsheet.
+- **Same underlying data**, better presentation — don't redesign the schema
+  just to chase a UX idea; invest in the interaction/visualization layer.
+- **More interactive data visualizations** — charts/summaries should be
+  filterable/drillable, not static numbers.
+- **New feature requirements** (likely need schema additions beyond Tasks
+  3-4's tables):
+  - Pre-budgeting at **two granularities**: a single day, and a month
+    (current `budgets` table is month-only).
+  - Budgeting **anchored to actual income** — enter real job cash flow and
+    build the budget around it, not just planned amounts in isolation.
+  - **Recurring "constants"** — fixed recurring items like taxes and
+    monthly subscriptions (e.g. gym) accounted for automatically, not
+    re-entered every period. No such concept exists yet (`income`/
+    `expenses` are one-off transaction rows only).
+
+## How to resume in a new session
+
+1. `git log --oneline -15` on `foundation-plan` to confirm this file is
+   still accurate (it should be, but trust git over prose if they diverge).
+2. Check `.superpowers/sdd/2026-08-18-foundation/progress.md` — if present,
+   it has fix-round-level detail this file omits. If absent (fresh clone),
+   this file plus git log is the full record; task reviews already done
+   don't need to be redone.
+3. `.env.local` must exist for anything live-Supabase (build, tests are
+   fine without it — only `scripts/*.ts` and the app's Supabase calls need
+   it). Ask the human if missing — see Live infrastructure above for what's
+   needed.
+4. Continue from the first ⬜ task above.
