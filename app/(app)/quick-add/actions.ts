@@ -108,7 +108,7 @@ export async function createTransaction(
   if (!parsed.ok) return { error: parsed.error, submitted: true }
 
   const { table, payload } = buildPayload(parsed)
-  const { error } = await supabase.from(table).insert(payload as any)
+  const { error } = await supabase.from(table).insert(payload)
   if (error) return { error: error.message, submitted: true }
 
   revalidatePath('/transactions')
@@ -132,7 +132,7 @@ export async function updateTransaction(
   if (!parsed.ok) return { error: parsed.error, submitted: true }
 
   const { table, payload } = buildPayload(parsed)
-  const { error } = await supabase.from(table).update(payload as any).eq('id', id)
+  const { error } = await supabase.from(table).update(payload).eq('id', id)
   if (error) return { error: error.message, submitted: true }
 
   revalidatePath('/transactions')
