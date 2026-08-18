@@ -42,3 +42,6 @@ next-env.d.ts
 
 # git worktrees (used for isolated task branches)
 .worktrees/
+
+# subagent-driven-development scratch (ledger, briefs, review packages)
+.superpowers/
