@@ -32,6 +32,7 @@ export function QuickAddSheet({
   const action = editing ? updateTransaction.bind(null, editing.id, editing.kind) : createTransaction
   const [state, formAction, pending] = useActionState(action, initialState)
   const [isDeleting, startDeleteTransition] = useTransition()
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (state.submitted && state.error === null) {
@@ -52,9 +53,14 @@ export function QuickAddSheet({
   function handleDelete() {
     if (!editing) return
     if (!window.confirm('Delete this transaction?')) return
+    setDeleteError(null)
     startDeleteTransition(async () => {
-      await deleteTransaction(editing.id, editing.kind)
-      onClose()
+      try {
+        await deleteTransaction(editing.id, editing.kind)
+        onClose()
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : 'Failed to delete.')
+      }
     })
   }
 
@@ -225,14 +231,17 @@ export function QuickAddSheet({
         </div>
 
         {editing && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="w-full text-center text-sm text-red-600"
-          >
-            {isDeleting ? 'Deleting…' : 'Delete'}
-          </button>
+          <>
+            {deleteError && <p className="text-sm text-red-600">{deleteError}</p>}
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="w-full text-center text-sm text-red-600"
+            >
+              {isDeleting ? 'Deleting…' : 'Delete'}
+            </button>
+          </>
         )}
       </form>
     </div>
