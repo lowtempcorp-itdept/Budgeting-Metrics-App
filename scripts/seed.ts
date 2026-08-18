@@ -20,10 +20,11 @@ const { data: existingAccounts, error: existingAccountsError } = await supabase
   .eq('user_id', user.id)
 if (existingAccountsError) throw existingAccountsError
 
-if (existingAccounts.length > 0) {
-  console.log(`Already seeded (${existingAccounts.length} accounts found) — skipping.`)
-  process.exit(0)
-}
+const { data: existingCategories, error: existingCategoriesError } = await supabase
+  .from('categories')
+  .select('id')
+  .eq('user_id', user.id)
+if (existingCategoriesError) throw existingCategoriesError
 
 const accountNames = ['Cash', 'Gcash', 'Maribank', 'Savings/Debit Card']
 const categoryNames = [
@@ -33,15 +34,28 @@ const categoryNames = [
   'Printing', 'School Expenses', 'Shoes', 'Smart App', 'Supplements', 'Other',
 ]
 
-const { error: accountsError } = await supabase
-  .from('accounts')
-  .insert(accountNames.map((name) => ({ name, user_id: user.id })))
-if (accountsError) throw accountsError
+const accountsAlreadySeeded = existingAccounts.length > 0
+const categoriesAlreadySeeded = existingCategories.length > 0
 
-const { error: categoriesError } = await supabase
-  .from('categories')
-  .insert(categoryNames.map((name) => ({ name, user_id: user.id })))
-if (categoriesError) throw categoriesError
+if (!accountsAlreadySeeded) {
+  const { error: accountsError } = await supabase
+    .from('accounts')
+    .insert(accountNames.map((name) => ({ name, user_id: user.id })))
+  if (accountsError) throw accountsError
+  console.log(`Seeded ${accountNames.length} accounts.`)
+} else {
+  console.log(`Accounts already seeded (${existingAccounts.length} found) — skipping.`)
+}
+
+if (!categoriesAlreadySeeded) {
+  const { error: categoriesError } = await supabase
+    .from('categories')
+    .insert(categoryNames.map((name) => ({ name, user_id: user.id })))
+  if (categoriesError) throw categoriesError
+  console.log(`Seeded ${categoryNames.length} categories.`)
+} else {
+  console.log(`Categories already seeded (${existingCategories.length} found) — skipping.`)
+}
 
 const { data: seededAccounts, error: verifyAccountsError } = await supabase
   .from('accounts')
