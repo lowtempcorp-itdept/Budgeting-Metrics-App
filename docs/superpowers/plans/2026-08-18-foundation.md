@@ -244,17 +244,19 @@ const supabase = createClient(url, anonKey)
 
 const { error } = await supabase.from('_connection_check').select('*').limit(1)
 
-console.log(
-  error?.code === '42P01' // "relation does not exist" — proves the request reached Postgres
-    ? 'Connected to Supabase successfully.'
-    : `Unexpected result: ${JSON.stringify(error)}`
-)
+// "relation does not exist" proves the request reached Postgres and was authenticated —
+// any other error means the URL/key are wrong or the project is unreachable.
+if (error?.code !== '42P01') {
+  throw new Error(`Could not confirm a connection to Supabase: ${JSON.stringify(error)}`)
+}
+
+console.log('Connected to Supabase successfully.')
 ```
 
 - [ ] **Step 7: Run the check**
 
 Run: `npx tsx --env-file=.env.local scripts/check-connection.ts`
-Expected: `Connected to Supabase successfully.`
+Expected: prints `Connected to Supabase successfully.` and exits 0. If the URL/key are wrong, the script throws and exits non-zero instead.
 
 - [ ] **Step 8: Commit**
 
@@ -288,24 +290,54 @@ const url = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const supabase = createClient(url, anonKey)
 
-const tables = ['accounts', 'categories']
+const [expect, ...tables] = process.argv.slice(2)
+
+if (expect !== 'missing' && expect !== 'ready') {
+  throw new Error('Usage: tsx scripts/verify-schema.ts <missing|ready> <table...>')
+}
+if (tables.length === 0) {
+  throw new Error('Usage: tsx scripts/verify-schema.ts <missing|ready> <table...>')
+}
+
+let failures = 0
 
 for (const table of tables) {
   const { data, error } = await supabase.from(table).select('*')
+
+  if (expect === 'missing') {
+    if (error) {
+      console.log(`${table}: OK (not ready yet, as expected — ${error.message})`)
+    } else {
+      console.log(`${table}: FAIL — expected the table to not exist yet, but the query succeeded`)
+      failures++
+    }
+    continue
+  }
+
   if (error) {
-    console.log(`${table}: NOT READY (${error.message})`)
+    console.log(`${table}: FAIL — expected the table to exist, got error: ${error.message}`)
+    failures++
   } else if (data.length === 0) {
     console.log(`${table}: OK (table exists, RLS blocks anonymous access)`)
   } else {
-    console.log(`${table}: WARNING — anonymous client read ${data.length} row(s)`)
+    console.log(`${table}: FAIL — anonymous client read ${data.length} row(s), RLS is not restricting access`)
+    failures++
   }
 }
+
+if (failures > 0) {
+  throw new Error(`${failures} table(s) failed verification`)
+}
+
+console.log('All tables verified.')
 ```
+
+This takes the tables to check as CLI arguments (rather than a hardcoded list), so Task 4 can reuse it unmodified against a different table set.
 
 - [ ] **Step 2: Run it before the migration exists (expect NOT READY)**
 
-Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts`
-Expected: both lines print `NOT READY (relation "public.accounts" does not exist)` / same for `categories`.
+Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts missing accounts categories`
+Expected: both tables print `OK (not ready yet, as expected — relation "public.accounts" does not exist)` (and the same for `categories`), then `All tables verified.`, exiting 0.
 
 - [ ] **Step 3: Write the migration**
 
@@ -349,8 +381,8 @@ Expected: "Success. No rows returned."
 
 - [ ] **Step 5: Run the verification script again (expect OK)**
 
-Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts`
-Expected: both lines print `OK (table exists, RLS blocks anonymous access)`.
+Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts ready accounts categories`
+Expected: both tables print `OK (table exists, RLS blocks anonymous access)`, then `All tables verified.`, exiting 0.
 
 - [ ] **Step 6: Commit**
 
@@ -365,32 +397,17 @@ git commit -m "Add accounts and categories tables with RLS"
 
 **Files:**
 - Create: `supabase/migrations/0002_income_expenses_budgets_portfolio.sql`
-- Modify: `scripts/verify-schema.ts`
 
 **Interfaces:**
-- Consumes: `accounts`, `categories` tables from Task 3
+- Consumes: `accounts`, `categories` tables and the `scripts/verify-schema.ts <missing|ready> <table...>` script from Task 3 — reused unmodified, since it takes the table list as CLI arguments.
 - Produces: `income`, `expenses`, `budgets`, `portfolio_transactions` tables, all RLS-protected.
 
-- [ ] **Step 1: Extend the verification script's table list**
+- [ ] **Step 1: Run the verification script before the migration exists (expect NOT READY for the 4 new tables)**
 
-Modify `scripts/verify-schema.ts`, changing:
+Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts missing income expenses budgets portfolio_transactions`
+Expected: all four tables print `OK (not ready yet, as expected — ...)`, then `All tables verified.`, exiting 0.
 
-```ts
-const tables = ['accounts', 'categories']
-```
-
-to:
-
-```ts
-const tables = ['accounts', 'categories', 'income', 'expenses', 'budgets', 'portfolio_transactions']
-```
-
-- [ ] **Step 2: Run it before the migration exists (expect NOT READY for the 4 new tables)**
-
-Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts`
-Expected: `accounts` and `categories` print `OK`; `income`, `expenses`, `budgets`, `portfolio_transactions` print `NOT READY`.
-
-- [ ] **Step 3: Write the migration**
+- [ ] **Step 2: Write the migration**
 
 Create `supabase/migrations/0002_income_expenses_budgets_portfolio.sql`:
 
@@ -468,17 +485,17 @@ create policy "portfolio_transactions_update_own" on portfolio_transactions for 
 create policy "portfolio_transactions_delete_own" on portfolio_transactions for delete using (auth.uid() = user_id);
 ```
 
-- [ ] **Step 4: Apply the migration (manual)**
+- [ ] **Step 3: Apply the migration (manual)**
 
 In the Supabase dashboard **SQL Editor**, paste the full contents of `supabase/migrations/0002_income_expenses_budgets_portfolio.sql` and click **Run**.
 Expected: "Success. No rows returned."
 
-- [ ] **Step 5: Run the verification script again (expect OK for all 6)**
+- [ ] **Step 4: Run the verification script again (expect OK for all 6)**
 
-Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts`
-Expected: all 6 tables print `OK (table exists, RLS blocks anonymous access)`.
+Run: `npx tsx --env-file=.env.local scripts/verify-schema.ts ready accounts categories income expenses budgets portfolio_transactions`
+Expected: all 6 tables print `OK (table exists, RLS blocks anonymous access)`, then `All tables verified.`, exiting 0.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
