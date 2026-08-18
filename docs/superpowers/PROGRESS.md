@@ -40,8 +40,11 @@ budgeting/transactions/portfolio UI is a separate, later plan.
    branches dropped refreshed session cookies (`@supabase/ssr` pitfall).
    Fixed by copying `response.cookies` onto redirect responses. The plan
    *document* was not edited — if re-run from scratch, re-catch this.
-7. ✅ Seed script (4 accounts, 22 categories) — commit `1915870`. Idempotency
-   verified (second run correctly skips).
+7. ✅ Seed script (4 accounts, 22 categories) — commits `ecb0e88..faed756`.
+   **Found and fixed another plan bug**: original sample's idempotency
+   check was accounts-only, so a partial failure (accounts inserted,
+   categories insert fails) would permanently skip categories on every
+   re-run with no error. Fixed to per-table checks. Plan doc not edited.
 8. ⬜ PWA shell (manifest + service worker)
 9. ⬜ Mobile nav shell + placeholder screens
 10. ⬜ GitHub push + Vercel deploy — **note: GitHub push already effectively
