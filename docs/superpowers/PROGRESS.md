@@ -52,7 +52,10 @@ budgeting/transactions/portfolio UI is a separate, later plan.
    checks run before login. Fixed by extending the matcher. Controller
    generated the placeholder icons itself (solid-color PNGs via Node/zlib,
    no image editor needed).
-9. ⬜ Mobile nav shell + placeholder screens
+9. ✅ Mobile nav shell + placeholder screens — commits `410c444..51d123b`,
+   reviewed clean. Automated browser walkthrough via admin-generated magic
+   link was blocked by the browser tool's external-domain policy; human
+   did the manual click-through instead, confirmed working.
 10. ⬜ GitHub push + Vercel deploy — **note: GitHub push already effectively
     done** (this repo already lives at
     `https://github.com/lowtempcorp-itdept/Budgeting-Metrics-App.git`,
