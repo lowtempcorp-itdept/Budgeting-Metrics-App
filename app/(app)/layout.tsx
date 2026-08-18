@@ -13,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col bg-slate-50">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-        <span className="font-semibold text-slate-900">Personal Finance</span>
+        <span className="font-semibold text-slate-900">Personal Finance </span>
         <form action={logout}>
           <button type="submit" className="text-sm text-slate-500 hover:text-slate-900">
             Log out
