@@ -23,12 +23,21 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect('/login')
   }
 
-  const [accountsResult, categoriesResult, recentIncomeResult, recentExpenseResult] = await Promise.all([
-    supabase.from('accounts').select('id, name, archived').order('name'),
-    supabase.from('categories').select('id, name, archived').order('name'),
-    supabase.from('income').select('account_id, created_at').order('created_at', { ascending: false }).limit(1),
-    supabase.from('expenses').select('account_id, created_at').order('created_at', { ascending: false }).limit(1),
-  ])
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+
+  const [accountsResult, categoriesResult, recentIncomeResult, recentExpenseResult, recentCategoryUseResult] =
+    await Promise.all([
+      supabase.from('accounts').select('id, name, archived').order('name'),
+      supabase.from('categories').select('id, name, archived').order('name'),
+      supabase.from('income').select('account_id, created_at').order('created_at', { ascending: false }).limit(1),
+      supabase.from('expenses').select('account_id, created_at').order('created_at', { ascending: false }).limit(1),
+      supabase
+        .from('expenses')
+        .select('category_id')
+        .not('category_id', 'is', null)
+        .gte('occurred_on', ninetyDaysAgo.toISOString().slice(0, 10)),
+    ])
 
   const accounts = accountsResult.data ?? []
   const categories = categoriesResult.data ?? []
@@ -39,15 +48,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   ]
   const defaultAccountId = mostRecentAccountId(recentUses)
 
-  const ninetyDaysAgo = new Date()
-  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-  const { data: recentCategoryUse } = await supabase
-    .from('expenses')
-    .select('category_id')
-    .not('category_id', 'is', null)
-    .gte('occurred_on', ninetyDaysAgo.toISOString().slice(0, 10))
   const rankedCategoryIds = rankCategoriesByUsage(
-    (recentCategoryUse ?? []).map((row) => row.category_id as string)
+    (recentCategoryUseResult.data ?? []).map((row) => row.category_id as string)
   )
 
   return (
