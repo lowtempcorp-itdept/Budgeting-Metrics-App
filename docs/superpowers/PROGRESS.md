@@ -45,7 +45,13 @@ budgeting/transactions/portfolio UI is a separate, later plan.
    check was accounts-only, so a partial failure (accounts inserted,
    categories insert fails) would permanently skip categories on every
    re-run with no error. Fixed to per-table checks. Plan doc not edited.
-8. ⬜ PWA shell (manifest + service worker)
+8. ✅ PWA shell (manifest + service worker) — commits `faed756..e04a92f`.
+   **Found and fixed a third cross-task bug**: Task 6's `proxy.ts` matcher
+   didn't exempt the new icon files, so unauthenticated requests 307'd to
+   `/login` instead of serving the PNGs — would've broken installability
+   checks run before login. Fixed by extending the matcher. Controller
+   generated the placeholder icons itself (solid-color PNGs via Node/zlib,
+   no image editor needed).
 9. ⬜ Mobile nav shell + placeholder screens
 10. ⬜ GitHub push + Vercel deploy — **note: GitHub push already effectively
     done** (this repo already lives at
