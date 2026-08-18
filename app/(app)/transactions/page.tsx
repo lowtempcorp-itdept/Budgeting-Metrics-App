@@ -83,7 +83,7 @@ export default async function TransactionsPage({
     transactions = transactions.filter((t) => `${t.notes ?? ''} ${t.source ?? ''}`.toLowerCase().includes(q))
   }
 
-  transactions.sort((a, b) => (a.occurredOn < b.occurredOn ? 1 : -1))
+  transactions.sort((a, b) => (a.occurredOn < b.occurredOn ? 1 : a.occurredOn > b.occurredOn ? -1 : 0))
 
   const accountsById = new Map(accounts.map((a) => [a.id, a.name]))
   const categoriesById = new Map(categories.map((c) => [c.id, c.name]))
