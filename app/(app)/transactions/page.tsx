@@ -43,6 +43,10 @@ export default async function TransactionsPage({
       .lt('occurred_on', end),
   ])
 
+  for (const result of [accountsResult, categoriesResult, incomeResult, expensesResult]) {
+    if (result.error) throw new Error(result.error.message)
+  }
+
   const accounts = accountsResult.data ?? []
   const categories = categoriesResult.data ?? []
 

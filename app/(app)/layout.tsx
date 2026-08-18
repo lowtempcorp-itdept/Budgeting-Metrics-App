@@ -39,6 +39,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         .gte('occurred_on', ninetyDaysAgo.toISOString().slice(0, 10)),
     ])
 
+  for (const result of [accountsResult, categoriesResult, recentIncomeResult, recentExpenseResult, recentCategoryUseResult]) {
+    if (result.error) throw new Error(result.error.message)
+  }
+
   const accounts = accountsResult.data ?? []
   const categories = categoriesResult.data ?? []
 

@@ -13,6 +13,10 @@ export default async function AccountsPage() {
     supabase.from('expenses').select('account_id, amount'),
   ])
 
+  for (const result of [accountsResult, categoriesResult, incomeResult, expensesResult]) {
+    if (result.error) throw new Error(result.error.message)
+  }
+
   const accounts = accountsResult.data ?? []
   const categories = categoriesResult.data ?? []
   const balances = computeAccountBalances(

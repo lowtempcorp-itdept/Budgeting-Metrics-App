@@ -17,6 +17,7 @@ type ParsedFields =
       amount: number
       accountId: string
       source: string
+      isAdjustment: boolean
       notes: string | null
     }
   | {
@@ -54,7 +55,8 @@ function parseFields(kind: TransactionKind, formData: FormData): ParsedFields {
     if (typeof source !== 'string' || source.trim().length === 0) {
       return { ok: false, error: 'Source is required for income.' }
     }
-    return { ok: true, kind: 'income', occurredOn, amount, accountId, source: source.trim(), notes }
+    const isAdjustment = formData.get('isAdjustment') === 'on'
+    return { ok: true, kind: 'income', occurredOn, amount, accountId, source: source.trim(), isAdjustment, notes }
   }
 
   const isAdjustment = formData.get('isAdjustment') === 'on'
@@ -75,6 +77,7 @@ function buildPayload(parsed: Extract<ParsedFields, { ok: true }>) {
         amount: parsed.amount,
         account_id: parsed.accountId,
         source: parsed.source,
+        is_adjustment: parsed.isAdjustment,
         notes: parsed.notes,
       },
     }

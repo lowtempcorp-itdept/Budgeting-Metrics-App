@@ -188,17 +188,15 @@ export function QuickAddSheet({
           </div>
         )}
 
-        {kind === 'expense' && (
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              name="isAdjustment"
-              checked={isAdjustment}
-              onChange={(e) => setIsAdjustment(e.target.checked)}
-            />
-            This is a balance adjustment, not a category expense
-          </label>
-        )}
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            name="isAdjustment"
+            checked={isAdjustment}
+            onChange={(e) => setIsAdjustment(e.target.checked)}
+          />
+          This is a balance adjustment
+        </label>
 
         <div>
           <label htmlFor="notes" className="block text-sm font-medium text-slate-700">
