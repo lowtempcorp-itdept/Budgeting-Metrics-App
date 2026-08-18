@@ -107,8 +107,11 @@ export async function createTransaction(
   const parsed = parseFields(kind, formData)
   if (!parsed.ok) return { error: parsed.error, submitted: true }
 
-  const { table, payload } = buildPayload(parsed)
-  const { error } = await supabase.from(table).insert(payload)
+  const built = buildPayload(parsed)
+  const { error } =
+    built.table === 'income'
+      ? await supabase.from('income').insert(built.payload)
+      : await supabase.from('expenses').insert(built.payload)
   if (error) return { error: error.message, submitted: true }
 
   revalidatePath('/transactions')
@@ -131,8 +134,11 @@ export async function updateTransaction(
   const parsed = parseFields(kind, formData)
   if (!parsed.ok) return { error: parsed.error, submitted: true }
 
-  const { table, payload } = buildPayload(parsed)
-  const { error } = await supabase.from(table).update(payload).eq('id', id)
+  const built = buildPayload(parsed)
+  const { error } =
+    built.table === 'income'
+      ? await supabase.from('income').update(built.payload).eq('id', id)
+      : await supabase.from('expenses').update(built.payload).eq('id', id)
   if (error) return { error: error.message, submitted: true }
 
   revalidatePath('/transactions')
