@@ -87,10 +87,45 @@ deleted after merge per its own convention; git history is the record now.
   every time this session; the PowerShell tool worked fine for the
   identical command. Use PowerShell for pushes if Bash gets blocked.
 
-## Product direction for the NEXT plan (not yet scoped into a plan doc)
+## Transactions core sub-project: 🚧 IN PROGRESS (paused before Task 1)
+
+First of 5 sub-projects breaking down the post-foundation UI work (see
+"Product direction for the NEXT plan" below for where this list came
+from). Full sequence: **Transactions core** (this one) → Budgeting →
+Dashboard & Insights → Portfolio → Historical migration.
+
+**Done so far:**
+- Design spec written, approved, committed:
+  `docs/superpowers/specs/2026-08-18-transactions-core-design.md`.
+- Implementation plan written, self-reviewed, committed (9 tasks):
+  `docs/superpowers/plans/2026-08-18-transactions-core.md`.
+- Isolated worktree created via the native `EnterWorktree` tool at
+  `.claude/worktrees/transactions-core`, branch
+  `worktree-transactions-core`. `npm install` done, `.env.local` copied
+  in (it's gitignored, so new worktrees don't get it automatically —
+  copy it from the main checkout), baseline `npm test` passing (4/4)
+  before any implementation work.
+- The worktree branch was fast-forwarded to include the spec+plan
+  commits (`EnterWorktree` branches from `origin/<default-branch>` by
+  default, which was 2 commits behind local `main` at creation time —
+  worth checking for on any future worktree setup in this repo, since
+  it'll bite again if local `main` is ever ahead of `origin/main` when a
+  worktree is created).
+- Both `main` and `worktree-transactions-core` pushed to `origin`.
+
+**Not yet started:** superpowers:subagent-driven-development execution —
+no ledger exists yet at
+`.superpowers/sdd/2026-08-18-transactions-core/progress.md`, and Task 1
+(schema migration) has not been dispatched to an implementer subagent.
+
+**To resume:** see "How to resume in a new session" below.
+
+## Product direction for the NEXT plan (sub-projects 2-5 still unscoped)
 
 Captured here plus in the cross-session memory system so it isn't lost.
-Bring all of this into that plan's brainstorming/design phase:
+Sub-project 1 (Transactions core, above) has already turned the relevant
+parts of this into a spec+plan. Bring the rest into sub-projects 2-5's
+brainstorming/design phases as they come up:
 
 - **Core motivation**: current Google Sheets tracking doesn't get updated
   regularly because the spreadsheet UI doesn't invite regular use. The real
@@ -133,15 +168,23 @@ is in the cross-session memory system, not this repo.
 
 ## How to resume in a new session
 
-The foundation plan is done — there's nothing left to continue on it. The
-next step is scoping and building the real UI plan described above.
+The foundation plan is done. The Transactions core sub-project has a
+committed spec + plan and an isolated worktree ready — it just hasn't
+started executing tasks yet (see the 🚧 IN PROGRESS section above).
 
 1. `git log --oneline -5` on `main` to confirm this file is still accurate.
-2. Use superpowers:brainstorming (or superpowers:writing-plans once
-   requirements are clear) to scope the next plan, pulling in everything
-   under "Product direction for the NEXT plan" above plus the fuller detail
-   in the cross-session memory system.
-3. `.env.local` must exist for anything live-Supabase — see Live
-   infrastructure above for what's needed if starting on a new device.
-4. Once a plan doc exists, execute it with
-   superpowers:subagent-driven-development, same as the foundation plan.
+2. Resume the worktree: `EnterWorktree` with
+   `path: ".claude/worktrees/transactions-core"` (only works if that
+   local directory is still present — if it was removed when the last
+   session ended, recreate it instead with
+   `EnterWorktree({ name: "transactions-core" })` and then
+   `git merge origin/worktree-transactions-core --ff-only` to pull the
+   already-pushed work back in, since a fresh `EnterWorktree` branches
+   from `origin/main` and won't have it otherwise).
+3. Copy `.env.local` into the worktree if it isn't already there (it's
+   gitignored, so it never travels with the branch) — see Live
+   infrastructure above for what it needs to contain.
+4. Invoke superpowers:subagent-driven-development with
+   `docs/superpowers/plans/2026-08-18-transactions-core.md` as the
+   argument. It will find no ledger yet, read the plan, and start
+   dispatching Task 1 (schema migration).
