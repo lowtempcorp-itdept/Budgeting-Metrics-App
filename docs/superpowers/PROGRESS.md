@@ -68,7 +68,22 @@ budgeting/transactions/portfolio UI is a separate, later plan.
     blocked by the auto-mode classifier every time; the PowerShell tool
     worked fine for the identical command — use PowerShell for pushes if
     Bash gets blocked.
-- ⬜ Final whole-branch review (next up)
+- ✅ Final whole-branch review — dispatched on Opus over the full 22-commit
+  diff. No Critical findings; RLS/secrets/auth-lifecycle/deploy all verified
+  solid end-to-end. Found and fixed (commit `d7200c6`, migration
+  `0003_defer_child_fk_constraints.sql` applied): (1) `(app)` layout now
+  re-verifies the session server-side instead of relying solely on
+  `proxy.ts`'s matcher; (2) `app/page.tsx` no longer leaks the
+  `create-next-app` scaffold to authenticated users — redirects to
+  `/dashboard`; page metadata now says "Personal Finance"; (3) **4th
+  plan-authored bug**: `income`/`expenses`/`budgets`' `RESTRICT` FKs
+  conflicted with `auth.users`' `CASCADE`, could block deleting the single
+  user — fixed via `NO ACTION DEFERRABLE INITIALLY DEFERRED`; (4)
+  `public/sw.js`'s offline fallback produced a hard error instead of normal
+  offline handling, and precached an auth-gated route — fixed. Also
+  reverted Task 10's leftover trailing-space test edit and fixed two
+  `PROGRESS.md` issues (a self-contradiction, a plaintext email). Branch is
+  merge-ready.
 
 Full per-task findings, fix-round history, and parked/deferred minors live in
 `.superpowers/sdd/2026-08-18-foundation/progress.md` (the SDD ledger) — that
@@ -135,6 +150,20 @@ phase:
   (highest spend month, over-budget months, recurring categories, one-off
   anomalies) that's a strong candidate for an **auto-generated insights
   panel**; (3) category names drift release-to-release in the raw sheet
+- **Periodic rollup reports**: 3/6/9/12-month statistics views, generalizing
+  the hand-built 6-Month Summary sheet.
+- **Deferred from the final review** (real, but reasonably next-plan scope
+  rather than foundation-plan blockers — full detail in memory, not
+  repeated here): decide the `amount` sign convention (signed vs. always-
+  positive-with-`type`-implying-direction) and add a `check` constraint
+  before building screens that write these columns; add `archived` to
+  `accounts` for symmetry with `categories` (both are `RESTRICT`-protected,
+  so an ever-used account can currently never be deleted *or* hidden);
+  `proxy.ts`'s matcher is a hand-maintained exclusion list that's already
+  bitten once (Task 8) — consider a positive-match redesign; bottom nav
+  needs `sticky` + iOS safe-area padding + an active-tab indicator once
+  real (scrollable) screens replace the placeholders; PWA icons should add
+  `purpose: 'maskable'` for Android adaptive icons.
   (`Errands` vs `Errands Expense`, `Hotel` vs `Hotel Expenses`) — real
   evidence the fixed `categories` table (Task 3) is the right call; (4) open
   question: the sheet has a manual **account-balance reconciliation**
