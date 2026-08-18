@@ -19,7 +19,7 @@ This is plan 1 of the project (see `docs/superpowers/specs/2026-08-18-personal-f
 - Must be installable as a PWA (Add to Home Screen) on both Android and iOS.
 - Single user only — no sign-up UI, no multi-tenant logic. The one account is created directly in the Supabase dashboard.
 - All money values are displayed via the shared `formatCurrency` helper (`lib/format.ts`) so pesos are formatted consistently everywhere — never format currency ad hoc.
-- `SUPABASE_SERVICE_ROLE_KEY` must never be imported into any file under `app/`, `lib/`, or `middleware.ts` — it is read only by local scripts under `scripts/`, which never ship to the browser or run on Vercel.
+- `SUPABASE_SERVICE_ROLE_KEY` must never be imported into any file under `app/`, `lib/`, or `proxy.ts` (Next.js 16's renamed `middleware.ts` — see Task 6) — it is read only by local scripts under `scripts/`, which never ship to the browser or run on Vercel.
 
 ---
 
@@ -615,24 +615,26 @@ git commit -m "Add login page and server action"
 
 ---
 
-### Task 6: Route protection middleware
+### Task 6: Route protection proxy (formerly "middleware")
+
+> **Next.js 16 note:** the `middleware.ts` file convention used in older Next.js versions (and in most training data / tutorials) was renamed to `proxy.ts` in Next.js 16 — same file location, same `NextRequest`/`NextResponse` API, only the file name and exported function name changed (`middleware` → `proxy`). This project scaffolded on Next.js 16.3.1 (see Task 1's report), so use `proxy.ts` below, not `middleware.ts`. Before writing this file, skim `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md` in this repo to confirm nothing else has moved since this plan was written.
 
 **Files:**
-- Create: `middleware.ts`
+- Create: `proxy.ts`
 
 **Interfaces:**
 - Consumes: Supabase session cookies (set by Task 5's login action)
 - Produces: redirect-to-`/login` behavior for any unauthenticated request to a non-`/login` path; redirect-to-`/dashboard` for an authenticated request to `/login`.
 
-- [ ] **Step 1: Write the middleware**
+- [ ] **Step 1: Write the proxy**
 
-Create `middleware.ts` in the repo root:
+Create `proxy.ts` in the repo root:
 
 ```ts
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -694,7 +696,7 @@ Expected: `307 -> http://localhost:3000/login`
 
 ```bash
 git add -A
-git commit -m "Add auth middleware protecting all routes except /login"
+git commit -m "Add auth proxy protecting all routes except /login"
 ```
 
 (Full authenticated-redirect-away-from-login behavior is verified in Task 9's manual browser walkthrough, once `/dashboard` exists as a real page.)
