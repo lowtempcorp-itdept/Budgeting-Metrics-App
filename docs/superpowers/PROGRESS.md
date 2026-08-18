@@ -87,38 +87,79 @@ deleted after merge per its own convention; git history is the record now.
   every time this session; the PowerShell tool worked fine for the
   identical command. Use PowerShell for pushes if Bash gets blocked.
 
-## Transactions core sub-project: 🚧 IN PROGRESS (paused before Task 1)
+## Transactions core sub-project: 🚧 CODE COMPLETE — pending live migration + manual verification
 
-First of 5 sub-projects breaking down the post-foundation UI work (see
-"Product direction for the NEXT plan" below for where this list came
-from). Full sequence: **Transactions core** (this one) → Budgeting →
-Dashboard & Insights → Portfolio → Historical migration.
+First of 5 sub-projects breaking down the post-foundation UI work. Full
+sequence: **Transactions core** (this one) → Budgeting → Dashboard &
+Insights → Portfolio → Historical migration. Plan:
+`docs/superpowers/plans/2026-08-18-transactions-core.md` (9 tasks, all 9
+implemented via superpowers:subagent-driven-development, all task-level
+reviews clean). Branch `worktree-transactions-core`, worktree at
+`.claude/worktrees/transactions-core`.
 
-**Done so far:**
-- Design spec written, approved, committed:
-  `docs/superpowers/specs/2026-08-18-transactions-core-design.md`.
-- Implementation plan written, self-reviewed, committed (9 tasks):
-  `docs/superpowers/plans/2026-08-18-transactions-core.md`.
-- Isolated worktree created via the native `EnterWorktree` tool at
-  `.claude/worktrees/transactions-core`, branch
-  `worktree-transactions-core`. `npm install` done, `.env.local` copied
-  in (it's gitignored, so new worktrees don't get it automatically —
-  copy it from the main checkout), baseline `npm test` passing (4/4)
-  before any implementation work.
-- The worktree branch was fast-forwarded to include the spec+plan
-  commits (`EnterWorktree` branches from `origin/<default-branch>` by
-  default, which was 2 commits behind local `main` at creation time —
-  worth checking for on any future worktree setup in this repo, since
-  it'll bite again if local `main` is ever ahead of `origin/main` when a
-  worktree is created).
-- Both `main` and `worktree-transactions-core` pushed to `origin`.
+**Why "code complete" and not "done":** this app has exactly one Supabase
+environment (live production) and no session this far has had dashboard
+login, a DB password, or a Supabase management-API token available — only
+the anon/service-role JWTs in `.env.local`, which can't run DDL. Task 1's
+migration (`supabase/migrations/0004_transactions_core.sql`) is written,
+committed, and was verified to correctly *fail* pre-application, but it
+has never been run against the live database. Every later task's
+live-browser manual-verification step was therefore skipped by design
+(documented per-task in the now-deleted SDD ledger and in commit
+history) — code was written, committed, and type-checked/unit-tested,
+but never exercised against real data end-to-end.
 
-**Not yet started:** superpowers:subagent-driven-development execution —
-no ledger exists yet at
-`.superpowers/sdd/2026-08-18-transactions-core/progress.md`, and Task 1
-(schema migration) has not been dispatched to an implementer subagent.
+**What's implemented (14 commits over the 9 tasks, some with fix rounds —
+see `git log` on this branch):**
+- Schema migration: `check (amount > 0)` on all four amount columns,
+  `accounts.archived`, `income.is_adjustment`/`expenses.is_adjustment`,
+  `expenses.category_id` now nullable with a
+  `is_adjustment or category_id is not null` check.
+- `lib/date.ts` (Asia/Manila date helpers), `lib/transactions.ts`
+  (account balances, most-recent-account, category-usage ranking) — both
+  pure functions, both unit-tested, both passing.
+- Quick-add bottom sheet (floating "+" reachable from every screen),
+  wired into `app/(app)/layout.tsx` alongside a sticky bottom nav with
+  active-tab indicator and iOS safe-area padding.
+- `/accounts`: accounts + categories list with computed (not stored)
+  balances, archive/unarchive toggles, add-new forms.
+- `/transactions`: filterable (month/type/account/category/search) list,
+  tap-to-edit via the quick-add sheet, signed amount coloring,
+  balance-adjustment badge.
 
-**To resume:** see "How to resume in a new session" below.
+**Two real bugs the plan's own sample code had** (caught in task review,
+fixed before commit — same pattern as the 4 bugs in the foundation plan):
+1. `app/(app)/quick-add/actions.ts`'s `buildPayload()` result was
+   destructured (`const { table, payload } = buildPayload(parsed)`),
+   which discards TypeScript's discriminated-union narrowing between the
+   two — fixed by narrowing on the whole returned object instead
+   (`built.table === 'income' ? supabase.from('income').insert(built.payload) : ...`).
+2. `app/(app)/transactions/page.tsx`'s sort comparator
+   (`a.occurredOn < b.occurredOn ? 1 : -1`) never returned 0 for equal
+   dates, violating the well-formed-comparator contract — fixed to a
+   proper three-way comparison.
+
+Deferred Minor findings (not blockers, worth a look someday): quick-add's
+kind-toggle buttons lack `aria-pressed`; the category radio group lacks
+a `fieldset`/`legend`; `QuickAddProvider`'s FAB `onClick` duplicates
+`openCreate`'s logic instead of calling it; submit/delete buttons in the
+quick-add sheet don't cross-disable each other; clicking the sheet's
+backdrop closes it even mid-submit; `actions.ts` throws raw Supabase
+error text with no inline form-level error UI; archived accounts/
+categories still appear in the transactions filter dropdowns; no
+validation of a malformed `?month=` URL param (low risk — the only UI
+entry point is `<input type="month">`).
+
+Also fixed, unrelated to this plan: this Next.js version needs
+`npx next typegen` run once before `tsc --noEmit` will resolve
+route-generated ambient types (e.g. `LayoutProps` in `app/layout.tsx`) —
+otherwise every task's type-check gate shows a false-positive unrelated
+error. `.next/types` and `next-env.d.ts` are gitignored, so this is a
+one-time local step, not a commit.
+
+**To resume / finish this sub-project:** see "How to resume in a new
+session" below — it's now a short manual checklist, not a full
+implementation pass.
 
 ## Product direction for the NEXT plan (sub-projects 2-5 still unscoped)
 
@@ -168,23 +209,35 @@ is in the cross-session memory system, not this repo.
 
 ## How to resume in a new session
 
-The foundation plan is done. The Transactions core sub-project has a
-committed spec + plan and an isolated worktree ready — it just hasn't
-started executing tasks yet (see the 🚧 IN PROGRESS section above).
+The foundation plan is done and live. The Transactions core sub-project's
+code is done (see above) — what's left is a human doing two things, then
+a final review + merge:
 
-1. `git log --oneline -5` on `main` to confirm this file is still accurate.
-2. Resume the worktree: `EnterWorktree` with
-   `path: ".claude/worktrees/transactions-core"` (only works if that
-   local directory is still present — if it was removed when the last
-   session ended, recreate it instead with
-   `EnterWorktree({ name: "transactions-core" })` and then
-   `git merge origin/worktree-transactions-core --ff-only` to pull the
-   already-pushed work back in, since a fresh `EnterWorktree` branches
-   from `origin/main` and won't have it otherwise).
-3. Copy `.env.local` into the worktree if it isn't already there (it's
-   gitignored, so it never travels with the branch) — see Live
-   infrastructure above for what it needs to contain.
-4. Invoke superpowers:subagent-driven-development with
-   `docs/superpowers/plans/2026-08-18-transactions-core.md` as the
-   argument. It will find no ledger yet, read the plan, and start
-   dispatching Task 1 (schema migration).
+1. **Apply the migration.** Supabase dashboard → SQL Editor → New query →
+   paste the full contents of
+   `supabase/migrations/0004_transactions_core.sql` (on branch
+   `worktree-transactions-core`) → Run. Expect "Success. No rows
+   returned." No agent this far has had dashboard access to do this step
+   itself.
+2. **Run the manual verification steps the plan called for but couldn't
+   be run live**, now that the schema exists: Task 6 step 4, Task 7 step
+   4, Task 8 step 4, and Task 9 (all in
+   `docs/superpowers/plans/2026-08-18-transactions-core.md`) — quick-add
+   sheet from every screen, archive/unarchive round-trip, transaction
+   create/edit/delete round-trip, filter round-trip, mobile viewport
+   check. Delete any test data created along the way through the UI
+   (only one Supabase environment — never leave test rows behind).
+3. Once verified (or if a bug turns up — fix, re-verify, commit), resume
+   with a fresh session: `EnterWorktree` with
+   `path: ".claude/worktrees/transactions-core"` (recreate with
+   `EnterWorktree({ name: "transactions-core" })` + `git merge
+   origin/worktree-transactions-core --ff-only` if the local directory
+   was removed), then superpowers:subagent-driven-development with the
+   plan file — it'll find the completed ledger... actually the ledger is
+   gitignored scratch and gets deleted at the end of a clean run; if it's
+   gone, just proceed straight to the final whole-branch review via
+   superpowers:requesting-code-review, then
+   superpowers:finishing-a-development-branch to merge.
+4. Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio,
+   Historical migration) are still unscoped — see "Product direction for
+   the NEXT plan" below.
