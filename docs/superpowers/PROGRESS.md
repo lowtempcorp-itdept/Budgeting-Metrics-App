@@ -83,11 +83,12 @@ plan is actively in flight in one continuous session.
 - `.env.local` (gitignored, recreate from Supabase dashboard → Project
   Settings → API if missing): `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-  `SEED_USER_EMAIL=lowtempcorp.it@gmail.com`
+  `SEED_USER_EMAIL=<the seed user's email>` (the real value lives only in
+  `.env.local`, not in this file)
 - `.claude/launch.json` — lets the Browser tool run `npm run dev` on :3000
   for manual UI checks without a human starting the server by hand.
 - GitHub: `lowtempcorp-itdept/Budgeting-Metrics-App`, branch `foundation-plan`
-  (not yet merged to `main`; Vercel not yet connected as of Task 7).
+  (not yet merged to `main`).
 
 ## Decisions / conventions worth knowing
 

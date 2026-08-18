@@ -1,5 +1,5 @@
 const CACHE_NAME = 'finance-app-shell-v1'
-const SHELL_ASSETS = ['/login']
+const SHELL_ASSETS = ['/icon-192.png']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)))
@@ -17,5 +17,5 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
-  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)))
+  event.respondWith(fetch(event.request).catch(async () => (await caches.match(event.request)) ?? Response.error()))
 })
