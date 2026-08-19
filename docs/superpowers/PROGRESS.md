@@ -13,45 +13,22 @@ expenses, budgets, portfolio). Design spec:
 
 ## Foundation plan: ✅ COMPLETE — merged to `main`, live in production
 
-Plan file: `docs/superpowers/plans/2026-08-18-foundation.md` (all 10 tasks +
-final whole-branch review done). Merged to `main` 2026-08-18 (fast-forward,
-commit `8767667`). `foundation-plan` branch kept on GitHub (merged, not
-deleted) but the local copy was deleted after merge — you should be on
-`main` now.
+Plan file: `docs/superpowers/plans/2026-08-18-foundation.md`. Merged to
+`main` 2026-08-18 (fast-forward, commit `8767667`).
 
 **Live**: `budgeting-metrics-app.vercel.app` — Vercel Production Branch is
-`main`, auto-deploys on every push. Verified end-to-end on a real iPhone:
-login → dashboard → nav → PWA install (Add to Home Screen) all work.
+`main`, auto-deploys on every push. Verified end-to-end on a real iPhone.
 
 **What shipped**: Next.js scaffold, Supabase client helpers, full DB schema
 (`accounts`, `categories`, `income`, `expenses`, `budgets`,
 `portfolio_transactions` — all RLS owner-only), login + auth proxy gating
-every route (with defense-in-depth: the `(app)` layout re-verifies the
-session itself, not just the proxy matcher), idempotent seed script (4
-accounts, 22 categories), PWA manifest + service worker, mobile nav shell
-with 5 placeholder "coming soon" screens. The real
-budgeting/transactions/portfolio UI is intentionally a separate, later plan.
+every route, idempotent seed script (4 accounts, 22 categories), PWA
+manifest + service worker, mobile nav shell.
 
-**4 bugs found in the plan's own sample code (not implementation bugs) and
-fixed**, worth knowing since the plan *document* itself was left unedited —
-re-catch these if this plan is ever re-run from scratch:
-1. `proxy.ts` redirect branches dropped refreshed session cookies
-   (`@supabase/ssr` pitfall) — fixed by copying `response.cookies` onto
-   redirect responses.
-2. `scripts/seed.ts`'s idempotency check was accounts-only — a partial
-   failure could permanently skip categories forever with no error — fixed
-   to per-table independent checks.
-3. `proxy.ts`'s matcher didn't exempt the PWA icon files, breaking
-   installability checks that run before login — fixed by extending the
-   exemption list.
-4. `income`/`expenses`/`budgets`'s `RESTRICT` FKs conflicted with
-   `auth.users`' `CASCADE` (could block deleting the single user) — fixed
-   via `NO ACTION DEFERRABLE INITIALLY DEFERRED`
-   (`supabase/migrations/0003_defer_child_fk_constraints.sql`).
-
-Full task-by-task history (22 commits, `31b47b5..8767667`) is in `git log`
-— the SDD scratch ledger (`.superpowers/sdd/2026-08-18-foundation/`) was
-deleted after merge per its own convention; git history is the record now.
+4 bugs in the plan's own sample code were caught and fixed during
+implementation (cookie handling in `proxy.ts`, seed idempotency, PWA icon
+exemption, FK constraint conflicts) — full detail in git history
+(`31b47b5..8767667`) if this plan is ever re-run from scratch.
 
 ## Live infrastructure
 
@@ -60,264 +37,160 @@ deleted after merge per its own convention; git history is the record now.
 - `.env.local` (gitignored, recreate from Supabase dashboard → Project
   Settings → API if missing on a new device): `NEXT_PUBLIC_SUPABASE_URL`,
   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
-  `SEED_USER_EMAIL=<the seed user's email>` (real value lives only in
+  `SEED_USER_EMAIL=<the seed user's email>` (real value only in
   `.env.local`, never commit it)
-- `.claude/launch.json` — lets the Browser tool run `npm run dev` on :3000
-  for manual UI checks without a human starting the server by hand.
-- GitHub: `lowtempcorp-itdept/Budgeting-Metrics-App`. `main` is now the
-  deployed branch; `foundation-plan` still exists remotely (merged, kept
-  by choice, not deleted).
+- `.claude/launch.json` — lets the Browser tool run `npm run dev` on :3000.
+- GitHub: `lowtempcorp-itdept/Budgeting-Metrics-App`. `main` is the
+  deployed branch.
 - Vercel project connected with env vars `NEXT_PUBLIC_SUPABASE_URL` and
   `NEXT_PUBLIC_SUPABASE_ANON_KEY` only — never add
   `SUPABASE_SERVICE_ROLE_KEY` or `SEED_USER_EMAIL` there.
 
 ## Decisions / conventions worth knowing
 
-- No git worktree was used for the foundation plan — worked directly on
-  its branch. Reconsider per-plan for the next one (a real UI plan touching
-  many files might benefit from one — see superpowers:using-git-worktrees).
 - Manual dashboard steps (creating the Supabase project, applying SQL
   migrations, creating the auth user, Vercel setup) are done by the human
   on request — the controller/agents don't have dashboard login access.
-  The controller verifies the *result* live afterward using the
-  anon/service-role keys.
 - Passwords are never handled by the agent — the human tests login flows
-  themselves in the browser when a real password is needed.
-- `git push` from the Bash tool got blocked by the auto-mode classifier
-  every time this session; the PowerShell tool worked fine for the
-  identical command. Use PowerShell for pushes if Bash gets blocked.
+  themselves when a real password is needed.
+- `git push` from the Bash tool got blocked by the auto-mode classifier in
+  one session; the PowerShell tool worked fine for the identical command.
 - **The sandboxed Browser pane's `preview_start({name})` always launches
-  from the main repo checkout's `.claude/launch.json`, ignoring
-  `EnterWorktree` entirely** — confirmed by checking `preview_list`'s
-  reported `cwd` after starting it from inside this worktree; it read
-  `C:\Projects\budgeting-metrics-app`, not the worktree path. The harness
-  also blocks editing the main checkout's `.claude/launch.json` from a
-  worktree-isolated session (by design). Workaround that actually works:
+  from the main repo checkout, ignoring which worktree the session is
+  in** — confirmed repeatedly across sub-projects. Workaround that works:
   start `npm run dev` yourself via the Bash tool from inside the worktree
   (`run_in_background: true`), then drive the browser with **Claude in
   Chrome** (`mcp__claude-in-chrome__*`) instead of the sandboxed Browser
-  pane — Claude in Chrome is the user's real, local Chrome, so it reaches
-  `localhost` directly regardless of which process/directory started the
-  server. The sandboxed pane could not reach a manually-started server at
-  all ("navigation ... denied or failed") since its localhost access is
-  tunneled only through its own `preview_start`-managed processes.
-- **Native `window.confirm()`/`alert()` dialogs crash the Claude in
-  Chrome tab** (`Error clicking: ... timed out`, then the tab disappears
-  from `tabs_context_mcp` entirely) — this app's delete-transaction flow
-  uses `window.confirm(...)`. Setting `window.confirm = () => true` via
-  `javascript_tool` does **not** work: content-script JS runs in an
-  isolated world with its own `window`, separate from the page's real one
-  React calls into. Fix: inject a real `<script>` tag so the override
-  runs in the page's main world:
-  `document.documentElement.appendChild(Object.assign(document.createElement('script'), { textContent: 'window.confirm = function(){return true;};' }))`
-  (remove the element after; the assignment itself is what persists).
-  Re-inject after every full page navigation (the override doesn't
-  survive one) — it does survive Server Action-driven soft refreshes.
+  pane — it's the user's real local Chrome, so it reaches `localhost`
+  directly regardless of which process started the server.
+- **Native `window.confirm()`/`alert()` dialogs crash the Claude in Chrome
+  tab.** Fix: inject a real `<script>` tag so an override runs in the
+  page's main world (content-script JS runs isolated and can't touch the
+  page's real `window`):
+  `document.documentElement.appendChild(Object.assign(document.createElement('script'), { textContent: 'window.confirm = function(){return true;};' }))`.
+  Re-inject after every full page navigation.
+- **`resize_window` is a no-op on the real (non-embedded) Chrome tab used
+  by Claude in Chrome** — confirmed during the Dashboard & Insights build.
+  Verify narrow-viewport/responsive behavior via DOM/CSS inspection
+  (overflow, max-width, flex-wrap) instead of a literal resize+screenshot
+  when this tool combination is in use.
+- This Next.js version needs `npx next typegen` run once per fresh
+  worktree before `tsc --noEmit` resolves route-generated ambient types
+  (e.g. `LayoutProps`, async `searchParams` shapes) — otherwise every
+  task's type-check gate shows a false-positive unrelated error.
+  `.next/types`/`next-env.d.ts` are gitignored, so this is a one-time
+  local step per worktree, not a commit.
 
-## Transactions core sub-project: ✅ COMPLETE — merged to `main` 2026-08-19
+## Sub-projects 1–3: shipped
 
-First of 5 sub-projects breaking down the post-foundation UI work. Full
-sequence: **Transactions core** (this one) → Budgeting → Dashboard &
-Insights → Portfolio → Historical migration. Plan:
-`docs/superpowers/plans/2026-08-18-transactions-core.md` (9 tasks, all 9
-implemented via superpowers:subagent-driven-development, all task-level
-reviews clean, final whole-branch review clean after one fix round).
+Post-foundation UI work is broken into 5 sub-projects, built out of strict
+order (Dashboard & Insights got an early design pass and shipped 3rd
+instead of 2nd). Deep history for finished sub-projects lives in git log,
+not repeated here.
 
-Merged to `main` 2026-08-19 via fast-forward (`main` hadn't moved since
-the branch diverged, so no merge commit was needed) — `e80c239..38fb35e`,
-pushed to `origin/main`, which triggers Vercel auto-deploy. Local branch
-`worktree-transactions-core` deleted after merge (same convention as
-`foundation-plan`); `origin/worktree-transactions-core` kept on GitHub.
-The worktree at `.claude/worktrees/transactions-core` was unregistered
-from git (`git worktree remove` cleared the metadata) but the directory
-itself resisted deletion — "used by another process" — something
-(terminal/editor) likely still has it open as a cwd. Not tracked by git
-anymore either way; delete by hand once whatever's holding it is closed.
+**1. Transactions core — ✅ COMPLETE**, merged to `main` 2026-08-19. Plan:
+`docs/superpowers/plans/2026-08-18-transactions-core.md`. Shipped: schema
+migration (`amount > 0` checks, `accounts.archived`, `is_adjustment` on
+income/expenses), quick-add bottom sheet + sticky bottom nav, `/accounts`
+and `/transactions` screens with filtering. A few deferred-minor UI items
+(aria attributes, archived rows still appearing in filter dropdowns) were
+never revisited — low risk, worth a look if this area gets touched again.
 
-**Migration applied 2026-08-19.** One pre-existing junk row blocked the
-first attempt: `scripts/verify-transactions-core-migration.ts`'s
-pre-migration run (Task 1, done deliberately to prove the script fails
-correctly before the constraint exists) had inserted a real
-`income` row with a negative amount, since at that point in time the
-insert had nothing to reject it — deleted by id, then the migration
-applied clean. Lesson for next time: give that script a cleanup step (or
-run it against a disposable row you delete immediately) rather than
-trusting "expected to fail" inserts not to land.
+**2. Budgeting — not started.** See "Next steps" below.
 
-**Manual browser verification complete 2026-08-19** — quick-add from
-Home and Transactions (proves the FAB/provider mounts at the layout
-level), edit, delete, income transactions, **both expense- and
-income-side balance adjustments** (the final review's fix — confirmed
-the checkbox renders for both kinds and `is_adjustment` writes
-correctly, with the adjustment badge and correct sign/color on both),
-all five transaction filters (month/type/account/search all narrow
-correctly; category filter also confirmed), archive/unarchive
-round-trip on Accounts (with the archived account correctly excluded
-from the quick-add dropdown), sticky bottom nav confirmed via scroll
-test. All test data created during verification was deleted afterward —
-`/transactions` and `/accounts` are back to their pre-verification empty
-state. Zero bugs found in the app itself during this pass — every fix
-from the final review held up end-to-end.
+**3. Dashboard & Insights — ✅ COMPLETE**, all 10 tasks implemented on
+branch `worktree-dashboard-insights` (not yet merged to `main` as of this
+commit — final whole-branch review runs next, then merge). Plan:
+`docs/superpowers/plans/2026-08-19-dashboard-insights.md` (10 tasks, all
+implemented via superpowers:subagent-driven-development in a dedicated
+worktree, all task-level reviews clean). Design:
+`docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`.
 
-**Known limitation, not a blocker:** couldn't get a true narrow mobile
-viewport in this session (see "Decisions / conventions" below) — the
-sticky nav's `position: sticky` behavior was confirmed via an actual
-scroll test at desktop width instead, and the `env(safe-area-inset-bottom)`
-padding class was confirmed present via code review (it's inert at
-desktop width, nothing to visually check there). Worth a real device or
-proper devtools emulation check before or shortly after merge.
+Shipped: the real `/dashboard` page — auto-generated insights (5 rule
+types, each independently omittable), account-balance cards, a portfolio
+net-per-ticker summary, month-to-date category spending bars, an
+income/expense trend chart (3/6/9/12-month selector, hover crosshair,
+SVG), and a reusable motion system (hover-grow, press-shrink, count-up,
+staggered entrance) — plus a dark-mode-only shell chrome that activates
+only on the Home tab. No schema changes; entirely read-only against the
+database. `lib/insights.ts`, `lib/trend.ts`, `lib/portfolio.ts`,
+`lib/motion.ts` are new, unit-tested, pure-function modules.
 
-**What's implemented (14 commits over the 9 tasks, some with fix rounds —
-see `git log` on this branch):**
-- Schema migration: `check (amount > 0)` on all four amount columns,
-  `accounts.archived`, `income.is_adjustment`/`expenses.is_adjustment`,
-  `expenses.category_id` now nullable with a
-  `is_adjustment or category_id is not null` check.
-- `lib/date.ts` (Asia/Manila date helpers), `lib/transactions.ts`
-  (account balances, most-recent-account, category-usage ranking) — both
-  pure functions, both unit-tested, both passing.
-- Quick-add bottom sheet (floating "+" reachable from every screen),
-  wired into `app/(app)/layout.tsx` alongside a sticky bottom nav with
-  active-tab indicator and iOS safe-area padding.
-- `/accounts`: accounts + categories list with computed (not stored)
-  balances, archive/unarchive toggles, add-new forms.
-- `/transactions`: filterable (month/type/account/category/search) list,
-  tap-to-edit via the quick-add sheet, signed amount coloring,
-  balance-adjustment badge.
+One real, human-adjudicated finding during the build: the plan's own
+sample code repurposed the reserved income-green (`#6cd3a5`) as a
+decorative rotating color in two places (account-card badges, portfolio
+ticker dots) — a direct conflict with its own Global Constraint that
+green/red are reserved for income/expense polarity only. Fixed to a
+neutral slate (`#9aa3b8`) in both places per an explicit human decision
+mid-build. Everything else implemented clean, or with only Minor/deferred
+findings — none load-bearing.
 
-**Two real bugs the plan's own sample code had** (caught in task review,
-fixed before commit — same pattern as the 4 bugs in the foundation plan):
-1. `app/(app)/quick-add/actions.ts`'s `buildPayload()` result was
-   destructured (`const { table, payload } = buildPayload(parsed)`),
-   which discards TypeScript's discriminated-union narrowing between the
-   two — fixed by narrowing on the whole returned object instead
-   (`built.table === 'income' ? supabase.from('income').insert(built.payload) : ...`).
-2. `app/(app)/transactions/page.tsx`'s sort comparator
-   (`a.occurredOn < b.occurredOn ? 1 : -1`) never returned 0 for equal
-   dates, violating the well-formed-comparator contract — fixed to a
-   proper three-way comparison.
+Live site currently shows an all-empty dashboard (₱0 everywhere, "add
+more transactions" fallbacks) because the real production database has
+zero income/expense/portfolio rows — see "When to import the real
+spreadsheet data" below for why that's expected right now, not a bug.
 
-Deferred Minor findings (not blockers, worth a look someday): quick-add's
-kind-toggle buttons lack `aria-pressed`; the category radio group lacks
-a `fieldset`/`legend`; `QuickAddProvider`'s FAB `onClick` duplicates
-`openCreate`'s logic instead of calling it; submit/delete buttons in the
-quick-add sheet don't cross-disable each other; clicking the sheet's
-backdrop closes it even mid-submit; `actions.ts` throws raw Supabase
-error text with no inline form-level error UI; archived accounts/
-categories still appear in the transactions filter dropdowns; no
-validation of a malformed `?month=` URL param (low risk — the only UI
-entry point is `<input type="month">`).
+**4. Portfolio — not started.**
 
-Also fixed, unrelated to this plan: this Next.js version needs
-`npx next typegen` run once before `tsc --noEmit` will resolve
-route-generated ambient types (e.g. `LayoutProps` in `app/layout.tsx`) —
-otherwise every task's type-check gate shows a false-positive unrelated
-error. `.next/types` and `next-env.d.ts` are gitignored, so this is a
-one-time local step, not a commit.
+**5. Historical migration — not started.**
 
-**To resume / finish this sub-project:** see "How to resume in a new
-session" below — it's now a short manual checklist, not a full
-implementation pass.
+## When to import the real spreadsheet data (`Budgeting Metrics.xlsx`)
 
-## Dashboard & Insights sub-project: spec + plan done, paused before Task 1
+Asked directly during the Dashboard & Insights build — worth keeping as a
+standing answer. **Not yet, deliberately.** The schema is still expected
+to change: Budgeting (sub-project 2) needs new columns/tables (daily +
+monthly granularity, income-anchored budgets, recurring "constants" like
+taxes/subscriptions) that don't exist yet; Portfolio (sub-project 4) will
+likely refine `portfolio_transactions` once real buy/sell/deposit/withdraw
+screens exist, not just get read from like the dashboard does today.
+Importing the real historical data now would mean re-mapping or partially
+redoing that import once those two land.
 
-Third of 5 sub-projects (built out of order — see "Transactions core"
-above for the full sequence; Budgeting is technically next). Design
-settled 2026-08-19 via superpowers:brainstorming using a live visual
-companion (mockups iterated in an actual browser tab, not just
-described) — blends "Passbook"'s ledger layout with "Wallet"'s account
-cards (the two directions mocked up in the prior session's Artifact),
-adds a new blue+amber palette (green/red still reserved for
-income/expense polarity, never repurposed), dark-mode-only for this page
-for now, a new Portfolio summary card, and a 4-primitive motion system
-(hover-grow, press-shrink, count-up, staggered entrance) meant to be
-reused by later sub-projects too.
+**The right time is sub-project 5, Historical migration — explicitly last
+in the sequence**, specifically so the one-time bulk import targets a
+finalized schema instead of a moving target. Structural analysis of the
+real spreadsheet (per-account pie charts, an insights-panel precedent in
+its "Key Insights" prose section, category-name drift across releases, an
+unresolved account-balance-reconciliation concept with no schema
+equivalent yet) is preserved in the cross-session memory system, not this
+repo — pull it back up when sub-project 5 starts.
 
-- Design spec: `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`
-- Implementation plan: `docs/superpowers/plans/2026-08-19-dashboard-insights.md`
-  — 10 tasks: date/trend-window helpers → insights engine (5
-  auto-generated rule types, each independently omittable when its data
-  doesn't exist) → portfolio net-per-ticker math → motion primitives →
-  dark shell chrome (activates only on the Home tab) → dashboard page
-  shell (masthead/hero/KPIs/empty-state) → insights panel + account
-  cards → portfolio summary + category bars → trend chart with
-  3/6/9/12-month selector → staggered entrance + final regression pass.
+## Next steps to complete the app
 
-**Not started — paused before Task 1** (same state Transactions core was
-once in). No schema changes needed; every table the plan reads already
-exists. Intended execution method: superpowers:subagent-driven-development
-(a dedicated git worktree, fresh subagent per task, task-level review,
-final whole-branch review — same as Transactions core), per explicit user
-instruction; the execution-method handoff prompt was shown but the
-session was halted before a choice was made, so pick that back up first.
+In order:
 
-## Product direction for the NEXT plan (sub-projects 2, 4, 5 still unscoped)
+1. **Budgeting (sub-project 2).** Schema additions: two budgeting
+   granularities (a single day, and a month — today's `budgets` table is
+   month-only), budgets anchored to actual entered income (not just a
+   target number), a new "recurring constants" concept for taxes/
+   subscriptions that shouldn't need re-entry every period. Needs its own
+   design spec + plan via superpowers:brainstorming before implementation,
+   same as Dashboard & Insights got.
+2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
+   transaction management UI (today `portfolio_transactions` only has a
+   read-only summary card on the dashboard — no way to add rows to it
+   in-app at all). Likely to touch/extend that table's schema.
+3. **Historical migration (sub-project 5).** One-time import of the real
+   `Budgeting Metrics.xlsx` into the by-then-finalized schema — see above
+   for why it waits until here.
 
-Captured here plus in the cross-session memory system so it isn't lost.
-Sub-projects 1 and 3 (Transactions core, Dashboard & Insights — above)
-have already turned the relevant parts of this into a spec+plan. Bring
-the rest into sub-projects 2/4/5's brainstorming/design phases as they
-come up:
-
-- **Core motivation**: current Google Sheets tracking doesn't get updated
-  regularly because the spreadsheet UI doesn't invite regular use. The real
-  budgeting/transactions/portfolio screens should be materially more
-  inviting to open daily than a spreadsheet. Same underlying data, better
-  presentation — don't redesign the schema just to chase a UX idea, invest
-  in the interaction/visualization layer. Visualizations should be
-  interactive (filterable/drillable), not static numbers.
-- **New feature requirements** (likely need schema additions): budgeting at
-  **two granularities** (a single day, and a month — `budgets` is
-  month-only today); budgeting **anchored to actual income** (enter real
-  job cash flow, build the budget around it); **recurring "constants"**
-  (taxes, subscriptions) accounted for automatically, not re-entered every
-  period (no such concept exists yet); **periodic rollup reports** at
-  3/6/9/12-month windows.
-- **From analyzing the user's real spreadsheet** (`Budgeting Metrics.xlsx`,
-  local machine only, not in repo): confirmed the schema matches their real
-  accounts/categories/portfolio structure. They build **per-account** pie
-  charts (Cash/GCash/Debit/Maribank), not just per-category — support that
-  breakdown too. Their hand-written "6-Month Summary" sheet's prose "Key
-  Insights" section (highest spend month, over-budget months, anomalies) is
-  a strong candidate for an **auto-generated insights panel**. Category
-  names drift release-to-release in the raw sheet (`Errands` vs `Errands
-  Expense`) — real evidence the fixed `categories` table was the right
-  call. Open question: the sheet has a manual **account-balance
-  reconciliation** concept with no schema equivalent — decide whether
-  balances should be a stored snapshot or purely derived from transactions.
-- **Deferred from the foundation plan's final review** (real, but
-  reasonably next-plan scope): decide the `amount` sign convention (signed
-  vs. always-positive-with-`type`-implying-direction) and add a `check`
-  constraint before writing screens that touch these columns; add
-  `archived` to `accounts` for symmetry with `categories`; `proxy.ts`'s
-  matcher is a hand-maintained exclusion list that's already bitten once —
-  consider a positive-match redesign; bottom nav needs `sticky` + iOS
-  safe-area padding + an active-tab indicator once real screens replace
-  placeholders; PWA icons should add `purpose: 'maskable'`.
-
-Full structural breakdown of the spreadsheet (not the raw financial data)
-is in the cross-session memory system, not this repo.
+Each sub-project should get its own design spec (via
+superpowers:brainstorming) and implementation plan (via
+superpowers:writing-plans) before code starts, then execute via
+superpowers:subagent-driven-development in a dedicated git worktree — same
+process used for Transactions core and Dashboard & Insights.
 
 ## How to resume in a new session
 
-The foundation plan and the Transactions core sub-project are both done
-and merged to `main` (live in production, Vercel auto-deploys on push).
-Dashboard & Insights (sub-project 3, built out of order — see above) has
-a committed design spec and a committed 10-task implementation plan, but
-**implementation hasn't started yet** — this is the immediate next step,
-not Budgeting, even though Budgeting is technically 2nd in the sequence.
-
-1. Read `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`
-   and `docs/superpowers/plans/2026-08-19-dashboard-insights.md` in full.
-2. Set up a dedicated git worktree for this sub-project (see
-   superpowers:using-git-worktrees — none exists yet for this plan, unlike
-   the leftover one from Transactions core).
-3. Execute the plan task-by-task via superpowers:subagent-driven-development
-   (the user's explicit instruction for this sub-project, matching how
-   Transactions core was built) — dispatch a fresh subagent per task,
-   review between tasks, final whole-branch review once all 10 are done.
-4. After Dashboard & Insights is built, reviewed, and merged: move to
-   Budgeting (sub-project 2 — schema additions for two-granularity
-   budgets, income-anchored budgets, recurring "constants"; see "Product
-   direction for the NEXT plan" below), then Portfolio (sub-project 4)
-   and Historical migration (sub-project 5).
+Sub-project 1 (Transactions core) is done and merged to `main` (live in
+production, Vercel auto-deploys on push). Sub-project 3 (Dashboard &
+Insights) has all 10 tasks implemented and reviewed on its own branch —
+if you're reading this before it's merged, finish that (final
+whole-branch review, then merge to `main` and push) before starting
+anything else. Once it's merged, sub-project 2 (Budgeting) is next in the
+stated sequence and has **no design spec or plan yet** — start there with
+superpowers:brainstorming,
+using "Next steps to complete the app" above and the cross-session memory
+system (spreadsheet structure analysis, the user's stated feature wants)
+as input. Full remaining sequence:
+`docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.

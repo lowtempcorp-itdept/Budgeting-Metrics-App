@@ -4,6 +4,7 @@ import { currentMonthInManila, todayInManila } from '@/lib/date'
 import { computeInsights, type InsightAccount, type InsightExpenseRow, type InsightBudgetRow } from '@/lib/insights'
 import { computeNetByTicker } from '@/lib/portfolio'
 import { computeTrend } from '@/lib/trend'
+import { STAGGER_DELAYS_MS } from '@/lib/motion'
 import { fraunces, workSans, ibmPlexMono } from './fonts'
 import { Masthead } from './Masthead'
 import { HeroKpis } from './HeroKpis'
@@ -137,34 +138,46 @@ export default async function DashboardPage({
   return (
     <div className={`dash-ground -m-4 mb-[-6rem] min-h-[calc(100vh-8rem)] p-4 pb-28 ${fraunces.variable} ${workSans.variable} ${ibmPlexMono.variable}`}>
       <div className="mx-auto flex max-w-xl flex-col gap-4">
-        <Masthead displayName={displayName} today={today} dayOfMonth={dayOfMonth} daysInMonth={daysInMonth} />
-        <HeroKpis
-          total={total}
-          incomeMtd={incomeMtd}
-          expenseMtd={expenseMtd}
-          netMtd={netMtd}
-          budgetPercentUsed={budgetPercentUsed}
-        />
-        <InsightsPanel insights={insights} />
-        <AccountCardsRow accounts={accountCards} />
-        <PortfolioSummary positions={portfolioPositions} />
-        <CategoryBars categories={categoryBars} />
-        <div className="dash-panel dash-enter rounded-2xl p-5">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 className="font-ledger-serif text-[16px] text-[#f9f6ee]">Trend</h2>
-            <PeriodSelector months={trendMonths} />
+        <div className="dash-enter" style={{ animationDelay: `${STAGGER_DELAYS_MS[0]}ms` }}>
+          <Masthead displayName={displayName} today={today} dayOfMonth={dayOfMonth} daysInMonth={daysInMonth} />
+        </div>
+        <div className="dash-enter" style={{ animationDelay: `${STAGGER_DELAYS_MS[1]}ms` }}>
+          <HeroKpis
+            total={total}
+            incomeMtd={incomeMtd}
+            expenseMtd={expenseMtd}
+            netMtd={netMtd}
+            budgetPercentUsed={budgetPercentUsed}
+          />
+        </div>
+        <div className="dash-enter" style={{ animationDelay: `${STAGGER_DELAYS_MS[2]}ms` }}>
+          <InsightsPanel insights={insights} />
+        </div>
+        <div className="dash-enter" style={{ animationDelay: `${STAGGER_DELAYS_MS[3]}ms` }}>
+          <AccountCardsRow accounts={accountCards} />
+        </div>
+        <div className="dash-enter" style={{ animationDelay: `${STAGGER_DELAYS_MS[4]}ms` }}>
+          <PortfolioSummary positions={portfolioPositions} />
+        </div>
+        <div className="dash-enter flex flex-col gap-4" style={{ animationDelay: `${STAGGER_DELAYS_MS[5]}ms` }}>
+          <CategoryBars categories={categoryBars} />
+          <div className="dash-panel rounded-2xl p-5">
+            <div className="mb-3 flex items-baseline justify-between gap-3">
+              <h2 className="font-ledger-serif text-[16px] text-[#f9f6ee]">Trend</h2>
+              <PeriodSelector months={trendMonths} />
+            </div>
+            <div className="font-ledger-sans mb-1.5 flex gap-4 text-[11.5px] text-[#c3c9dd]">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-3 rounded-full bg-[#6cd3a5]" />
+                Income
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="inline-block h-0.5 w-3 rounded-full bg-[#ed8264]" />
+                Expenses
+              </span>
+            </div>
+            <TrendChart points={trendPoints} />
           </div>
-          <div className="font-ledger-sans mb-1.5 flex gap-4 text-[11.5px] text-[#c3c9dd]">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-3 rounded-full bg-[#6cd3a5]" />
-              Income
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <span className="inline-block h-0.5 w-3 rounded-full bg-[#ed8264]" />
-              Expenses
-            </span>
-          </div>
-          <TrendChart points={trendPoints} />
         </div>
       </div>
     </div>
