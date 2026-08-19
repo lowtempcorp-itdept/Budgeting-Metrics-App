@@ -86,28 +86,77 @@ deleted after merge per its own convention; git history is the record now.
 - `git push` from the Bash tool got blocked by the auto-mode classifier
   every time this session; the PowerShell tool worked fine for the
   identical command. Use PowerShell for pushes if Bash gets blocked.
+- **The sandboxed Browser pane's `preview_start({name})` always launches
+  from the main repo checkout's `.claude/launch.json`, ignoring
+  `EnterWorktree` entirely** — confirmed by checking `preview_list`'s
+  reported `cwd` after starting it from inside this worktree; it read
+  `C:\Projects\budgeting-metrics-app`, not the worktree path. The harness
+  also blocks editing the main checkout's `.claude/launch.json` from a
+  worktree-isolated session (by design). Workaround that actually works:
+  start `npm run dev` yourself via the Bash tool from inside the worktree
+  (`run_in_background: true`), then drive the browser with **Claude in
+  Chrome** (`mcp__claude-in-chrome__*`) instead of the sandboxed Browser
+  pane — Claude in Chrome is the user's real, local Chrome, so it reaches
+  `localhost` directly regardless of which process/directory started the
+  server. The sandboxed pane could not reach a manually-started server at
+  all ("navigation ... denied or failed") since its localhost access is
+  tunneled only through its own `preview_start`-managed processes.
+- **Native `window.confirm()`/`alert()` dialogs crash the Claude in
+  Chrome tab** (`Error clicking: ... timed out`, then the tab disappears
+  from `tabs_context_mcp` entirely) — this app's delete-transaction flow
+  uses `window.confirm(...)`. Setting `window.confirm = () => true` via
+  `javascript_tool` does **not** work: content-script JS runs in an
+  isolated world with its own `window`, separate from the page's real one
+  React calls into. Fix: inject a real `<script>` tag so the override
+  runs in the page's main world:
+  `document.documentElement.appendChild(Object.assign(document.createElement('script'), { textContent: 'window.confirm = function(){return true;};' }))`
+  (remove the element after; the assignment itself is what persists).
+  Re-inject after every full page navigation (the override doesn't
+  survive one) — it does survive Server Action-driven soft refreshes.
 
-## Transactions core sub-project: 🚧 CODE COMPLETE — pending live migration + manual verification
+## Transactions core sub-project: ✅ COMPLETE — PR open, ready to merge
 
 First of 5 sub-projects breaking down the post-foundation UI work. Full
 sequence: **Transactions core** (this one) → Budgeting → Dashboard &
 Insights → Portfolio → Historical migration. Plan:
 `docs/superpowers/plans/2026-08-18-transactions-core.md` (9 tasks, all 9
 implemented via superpowers:subagent-driven-development, all task-level
-reviews clean). Branch `worktree-transactions-core`, worktree at
-`.claude/worktrees/transactions-core`.
+reviews clean, final whole-branch review clean after one fix round).
+Branch `worktree-transactions-core`, worktree at
+`.claude/worktrees/transactions-core`, PR open against `main`.
 
-**Why "code complete" and not "done":** this app has exactly one Supabase
-environment (live production) and no session this far has had dashboard
-login, a DB password, or a Supabase management-API token available — only
-the anon/service-role JWTs in `.env.local`, which can't run DDL. Task 1's
-migration (`supabase/migrations/0004_transactions_core.sql`) is written,
-committed, and was verified to correctly *fail* pre-application, but it
-has never been run against the live database. Every later task's
-live-browser manual-verification step was therefore skipped by design
-(documented per-task in the now-deleted SDD ledger and in commit
-history) — code was written, committed, and type-checked/unit-tested,
-but never exercised against real data end-to-end.
+**Migration applied 2026-08-19.** One pre-existing junk row blocked the
+first attempt: `scripts/verify-transactions-core-migration.ts`'s
+pre-migration run (Task 1, done deliberately to prove the script fails
+correctly before the constraint exists) had inserted a real
+`income` row with a negative amount, since at that point in time the
+insert had nothing to reject it — deleted by id, then the migration
+applied clean. Lesson for next time: give that script a cleanup step (or
+run it against a disposable row you delete immediately) rather than
+trusting "expected to fail" inserts not to land.
+
+**Manual browser verification complete 2026-08-19** — quick-add from
+Home and Transactions (proves the FAB/provider mounts at the layout
+level), edit, delete, income transactions, **both expense- and
+income-side balance adjustments** (the final review's fix — confirmed
+the checkbox renders for both kinds and `is_adjustment` writes
+correctly, with the adjustment badge and correct sign/color on both),
+all five transaction filters (month/type/account/search all narrow
+correctly; category filter also confirmed), archive/unarchive
+round-trip on Accounts (with the archived account correctly excluded
+from the quick-add dropdown), sticky bottom nav confirmed via scroll
+test. All test data created during verification was deleted afterward —
+`/transactions` and `/accounts` are back to their pre-verification empty
+state. Zero bugs found in the app itself during this pass — every fix
+from the final review held up end-to-end.
+
+**Known limitation, not a blocker:** couldn't get a true narrow mobile
+viewport in this session (see "Decisions / conventions" below) — the
+sticky nav's `position: sticky` behavior was confirmed via an actual
+scroll test at desktop width instead, and the `env(safe-area-inset-bottom)`
+padding class was confirmed present via code review (it's inert at
+desktop width, nothing to visually check there). Worth a real device or
+proper devtools emulation check before or shortly after merge.
 
 **What's implemented (14 commits over the 9 tasks, some with fix rounds —
 see `git log` on this branch):**
@@ -210,44 +259,21 @@ is in the cross-session memory system, not this repo.
 ## How to resume in a new session
 
 The foundation plan is done and live. The Transactions core sub-project's
-code is done, whole-branch-reviewed (opus, one fix-and-re-review round —
-see `git log` on `worktree-transactions-core` for the full 16-commit
-history), and pushed to `origin/worktree-transactions-core`. Not merged
-to `main` — merging now would break the live app, since `main` auto-
-deploys to Vercel on every push and the migration below hasn't been
-applied to the one live Supabase project yet.
+code is done, whole-branch-reviewed (opus, one fix-and-re-review round),
+migration applied to the live Supabase project, manually verified clean
+end-to-end (see above), and pushed to `origin/worktree-transactions-core`
+— see `git log` on that branch for the full commit history. **A PR is
+open against `main`; it just needs a human to click merge.** Not merged
+by any agent session, since merging is a one-way trigger (Vercel
+auto-deploys `main` on every push) — that decision is left to the human.
 
-**Open a PR** (no `gh` CLI available in the session that got this far —
-next session, either run `gh pr create --base main --head
-worktree-transactions-core` or open
-`https://github.com/lowtempcorp-itdept/Budgeting-Metrics-App/compare/main...worktree-transactions-core?expand=1`
-directly) and then, before merging that PR:
-
-1. **Apply the migration.** Supabase dashboard → SQL Editor → New query →
-   paste the full contents of
-   `supabase/migrations/0004_transactions_core.sql` (on branch
-   `worktree-transactions-core`) → Run. Expect "Success. No rows
-   returned." No agent this far has had dashboard access to do this step
-   itself. Once applied, every screen in this branch that hits a real bug
-   will now show a visible error page (final-review fix) instead of
-   silently rendering as empty/₱0.00 — if you see that error page after
-   applying the migration, something about the migration didn't take
-   cleanly and it's worth investigating before doing anything else below.
-2. **Run the manual verification steps the plan called for but couldn't
-   be run live**, now that the schema exists: Task 6 step 4, Task 7 step
-   4, Task 8 step 4, and Task 9 (all in
-   `docs/superpowers/plans/2026-08-18-transactions-core.md`) — quick-add
-   sheet from every screen (including an income-side balance adjustment,
-   which the final review found and fixed as write-unreachable — worth
-   deliberately testing), archive/unarchive round-trip, transaction
-   create/edit/delete round-trip, filter round-trip, mobile viewport
-   check. Delete any test data created along the way through the UI
-   (only one Supabase environment — never leave test rows behind).
-3. If a bug turns up: fix it, re-verify, commit, push again. Once clean,
-   merge the PR. After merging, delete the SDD ledger workspace
+1. Merge the PR (or ask an agent session to merge it — nothing left
+   blocks it).
+2. After merging: delete the SDD ledger workspace
    (`.superpowers/sdd/2026-08-18-transactions-core/`, gitignored scratch,
-   not yet deleted as of this note since the branch isn't merged) and
-   change this section's heading from CODE COMPLETE to ✅ COMPLETE.
-4. Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio,
+   not yet deleted as of this note since the branch wasn't merged when it
+   was written) and delete the worktree
+   (`.claude/worktrees/transactions-core`) if nothing else needs it.
+3. Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio,
    Historical migration) are still unscoped — see "Product direction for
-   the NEXT plan" below.
+   the NEXT plan" below. Budgeting is next in the stated sequence.
