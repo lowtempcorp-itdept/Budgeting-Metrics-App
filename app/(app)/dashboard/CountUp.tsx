@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { interpolateCount } from '@/lib/motion'
 import { formatCurrency } from '@/lib/format'
 
-export function CountUp({ value, durationMs = 900 }: { value: number; durationMs?: number }) {
+export function CountUp({ value, prefix, durationMs = 900 }: { value: number; prefix?: string; durationMs?: number }) {
   const [display, setDisplay] = useState(0)
   const frameRef = useRef<number | undefined>(undefined)
 
@@ -21,5 +21,5 @@ export function CountUp({ value, durationMs = 900 }: { value: number; durationMs
     }
   }, [value, durationMs])
 
-  return <span className="tabular-nums">{formatCurrency(display)}</span>
+  return <span className="tabular-nums">{prefix}{formatCurrency(display)}</span>
 }
