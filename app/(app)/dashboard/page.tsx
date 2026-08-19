@@ -3,6 +3,7 @@ import { computeAccountBalances } from '@/lib/transactions'
 import { currentMonthInManila, todayInManila } from '@/lib/date'
 import { computeInsights, type InsightAccount, type InsightExpenseRow, type InsightBudgetRow } from '@/lib/insights'
 import { computeNetByTicker } from '@/lib/portfolio'
+import { computeTrend } from '@/lib/trend'
 import { fraunces, workSans, ibmPlexMono } from './fonts'
 import { Masthead } from './Masthead'
 import { HeroKpis } from './HeroKpis'
@@ -10,8 +11,20 @@ import { InsightsPanel } from './InsightsPanel'
 import { AccountCardsRow } from './AccountCardsRow'
 import { PortfolioSummary } from './PortfolioSummary'
 import { CategoryBars } from './CategoryBars'
+import { TrendChart } from './TrendChart'
+import { PeriodSelector } from './PeriodSelector'
 
-export default async function DashboardPage() {
+const TREND_MONTH_OPTIONS = [3, 6, 9, 12]
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ months?: string }>
+}) {
+  const params = await searchParams
+  const requestedMonths = Number(params.months)
+  const trendMonths = TREND_MONTH_OPTIONS.includes(requestedMonths) ? requestedMonths : 6
+
   const supabase = await createClient()
   const {
     data: { user },
@@ -115,6 +128,12 @@ export default async function DashboardPage() {
     .map(([id, amount]) => ({ name: categoryNamesById.get(id) ?? 'Unknown', amount }))
     .sort((a, b) => b.amount - a.amount)
 
+  const trendPoints = computeTrend(
+    trendMonths,
+    income.map((row) => ({ occurredOn: row.occurred_on, amount: row.amount })),
+    expenses.map((row) => ({ occurredOn: row.occurred_on, amount: row.amount }))
+  )
+
   return (
     <div className={`dash-ground -m-4 mb-[-6rem] min-h-[calc(100vh-8rem)] p-4 pb-28 ${fraunces.variable} ${workSans.variable} ${ibmPlexMono.variable}`}>
       <div className="mx-auto flex max-w-xl flex-col gap-4">
@@ -130,6 +149,23 @@ export default async function DashboardPage() {
         <AccountCardsRow accounts={accountCards} />
         <PortfolioSummary positions={portfolioPositions} />
         <CategoryBars categories={categoryBars} />
+        <div className="dash-panel dash-enter rounded-2xl p-5">
+          <div className="mb-3 flex items-baseline justify-between gap-3">
+            <h2 className="font-ledger-serif text-[16px] text-[#f9f6ee]">Trend</h2>
+            <PeriodSelector months={trendMonths} />
+          </div>
+          <div className="font-ledger-sans mb-1.5 flex gap-4 text-[11.5px] text-[#c3c9dd]">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-3 rounded-full bg-[#6cd3a5]" />
+              Income
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-3 rounded-full bg-[#ed8264]" />
+              Expenses
+            </span>
+          </div>
+          <TrendChart points={trendPoints} />
+        </div>
       </div>
     </div>
   )
