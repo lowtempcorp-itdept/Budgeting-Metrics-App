@@ -12,3 +12,11 @@ export function todayInManila(referenceDate: Date = new Date()): string {
 export function currentMonthInManila(referenceDate: Date = new Date()): string {
   return `${todayInManila(referenceDate).slice(0, 7)}-01`
 }
+
+export function monthsAgoInManila(n: number, referenceDate: Date = new Date()): string {
+  const [year, month] = currentMonthInManila(referenceDate).split('-').map(Number)
+  const totalMonths = year * 12 + (month - 1) - n
+  const resultYear = Math.floor(totalMonths / 12)
+  const resultMonth = (totalMonths % 12) + 1
+  return `${resultYear}-${String(resultMonth).padStart(2, '0')}-01`
+}
