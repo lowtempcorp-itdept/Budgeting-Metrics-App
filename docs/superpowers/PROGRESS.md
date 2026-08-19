@@ -219,30 +219,45 @@ one-time local step, not a commit.
 session" below — it's now a short manual checklist, not a full
 implementation pass.
 
-## Product direction for the NEXT plan (sub-projects 2-5 still unscoped)
+## Dashboard & Insights sub-project: spec + plan done, paused before Task 1
+
+Third of 5 sub-projects (built out of order — see "Transactions core"
+above for the full sequence; Budgeting is technically next). Design
+settled 2026-08-19 via superpowers:brainstorming using a live visual
+companion (mockups iterated in an actual browser tab, not just
+described) — blends "Passbook"'s ledger layout with "Wallet"'s account
+cards (the two directions mocked up in the prior session's Artifact),
+adds a new blue+amber palette (green/red still reserved for
+income/expense polarity, never repurposed), dark-mode-only for this page
+for now, a new Portfolio summary card, and a 4-primitive motion system
+(hover-grow, press-shrink, count-up, staggered entrance) meant to be
+reused by later sub-projects too.
+
+- Design spec: `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`
+- Implementation plan: `docs/superpowers/plans/2026-08-19-dashboard-insights.md`
+  — 10 tasks: date/trend-window helpers → insights engine (5
+  auto-generated rule types, each independently omittable when its data
+  doesn't exist) → portfolio net-per-ticker math → motion primitives →
+  dark shell chrome (activates only on the Home tab) → dashboard page
+  shell (masthead/hero/KPIs/empty-state) → insights panel + account
+  cards → portfolio summary + category bars → trend chart with
+  3/6/9/12-month selector → staggered entrance + final regression pass.
+
+**Not started — paused before Task 1** (same state Transactions core was
+once in). No schema changes needed; every table the plan reads already
+exists. Intended execution method: superpowers:subagent-driven-development
+(a dedicated git worktree, fresh subagent per task, task-level review,
+final whole-branch review — same as Transactions core), per explicit user
+instruction; the execution-method handoff prompt was shown but the
+session was halted before a choice was made, so pick that back up first.
+
+## Product direction for the NEXT plan (sub-projects 2, 4, 5 still unscoped)
 
 Captured here plus in the cross-session memory system so it isn't lost.
-Sub-project 1 (Transactions core, above) has already turned the relevant
-parts of this into a spec+plan. Bring the rest into sub-projects 2-5's
-brainstorming/design phases as they come up:
-
-**Dashboard & Insights (sub-project 3) — early visual exploration done,
-2026-08-19, out of sequence order (Budgeting is technically next, but
-this was quick to mock up while the idea was fresh).** Published two full
-visual directions as a Claude Artifact, built against real account/
-category data, both interactive (hover tooltips, trend-chart crosshair),
-both palette-validated for CVD accessibility, both light+dark mode:
-- **Passbook** — warm ledger/journal aesthetic (Fraunces serif, ruled
-  dividers, insights read like margin notes) — echoes the hand-written
-  6-Month Summary sheet mentioned below.
-- **Wallet** — bold dark card-based aesthetic (Archivo, GCash/Maya-like)
-  — leans on the vernacular of the fintech apps already opened daily.
-
-Artifact: `https://claude.ai/code/artifact/153f6842-5644-48f8-b4da-c562bce1f209`
-(private to the account that built it). Liked both, hasn't picked a
-direction — next session should either settle on one (or blend elements)
-via superpowers:brainstorming, then write the actual design spec +
-implementation plan the way Transactions core got one, before building.
+Sub-projects 1 and 3 (Transactions core, Dashboard & Insights — above)
+have already turned the relevant parts of this into a spec+plan. Bring
+the rest into sub-projects 2/4/5's brainstorming/design phases as they
+come up:
 
 - **Core motivation**: current Google Sheets tracking doesn't get updated
   regularly because the spreadsheet UI doesn't invite regular use. The real
@@ -287,16 +302,22 @@ is in the cross-session memory system, not this repo.
 
 The foundation plan and the Transactions core sub-project are both done
 and merged to `main` (live in production, Vercel auto-deploys on push).
-Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio, Historical
-migration) are still unscoped — see "Product direction for the NEXT plan"
-above. Budgeting is next in the stated sequence, but Dashboard & Insights
-already has two visual directions mocked up (see above) and is a
-reasonable place to pick back up.
+Dashboard & Insights (sub-project 3, built out of order — see above) has
+a committed design spec and a committed 10-task implementation plan, but
+**implementation hasn't started yet** — this is the immediate next step,
+not Budgeting, even though Budgeting is technically 2nd in the sequence.
 
-1. Settle on a Dashboard & Insights direction (or a blend) via
-   superpowers:brainstorming, referencing the Passbook/Wallet artifact
-   above, then write the design spec + implementation plan the way
-   Transactions core got one, before building.
-2. After that's built and merged, move to Budgeting (schema additions
-   for two-granularity budgets, income-anchored budgets, recurring
-   "constants" — see "New feature requirements" above).
+1. Read `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`
+   and `docs/superpowers/plans/2026-08-19-dashboard-insights.md` in full.
+2. Set up a dedicated git worktree for this sub-project (see
+   superpowers:using-git-worktrees — none exists yet for this plan, unlike
+   the leftover one from Transactions core).
+3. Execute the plan task-by-task via superpowers:subagent-driven-development
+   (the user's explicit instruction for this sub-project, matching how
+   Transactions core was built) — dispatch a fresh subagent per task,
+   review between tasks, final whole-branch review once all 10 are done.
+4. After Dashboard & Insights is built, reviewed, and merged: move to
+   Budgeting (sub-project 2 — schema additions for two-granularity
+   budgets, income-anchored budgets, recurring "constants"; see "Product
+   direction for the NEXT plan" below), then Portfolio (sub-project 4)
+   and Historical migration (sub-project 5).
