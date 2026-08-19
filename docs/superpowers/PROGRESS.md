@@ -217,6 +217,24 @@ Sub-project 1 (Transactions core, above) has already turned the relevant
 parts of this into a spec+plan. Bring the rest into sub-projects 2-5's
 brainstorming/design phases as they come up:
 
+**Dashboard & Insights (sub-project 3) — early visual exploration done,
+2026-08-19, out of sequence order (Budgeting is technically next, but
+this was quick to mock up while the idea was fresh).** Published two full
+visual directions as a Claude Artifact, built against real account/
+category data, both interactive (hover tooltips, trend-chart crosshair),
+both palette-validated for CVD accessibility, both light+dark mode:
+- **Passbook** — warm ledger/journal aesthetic (Fraunces serif, ruled
+  dividers, insights read like margin notes) — echoes the hand-written
+  6-Month Summary sheet mentioned below.
+- **Wallet** — bold dark card-based aesthetic (Archivo, GCash/Maya-like)
+  — leans on the vernacular of the fintech apps already opened daily.
+
+Artifact: `https://claude.ai/code/artifact/153f6842-5644-48f8-b4da-c562bce1f209`
+(private to the account that built it). Liked both, hasn't picked a
+direction — next session should either settle on one (or blend elements)
+via superpowers:brainstorming, then write the actual design spec +
+implementation plan the way Transactions core got one, before building.
+
 - **Core motivation**: current Google Sheets tracking doesn't get updated
   regularly because the spreadsheet UI doesn't invite regular use. The real
   budgeting/transactions/portfolio screens should be materially more
