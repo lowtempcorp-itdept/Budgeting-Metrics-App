@@ -98,12 +98,15 @@ never revisited — low risk, worth a look if this area gets touched again.
 
 **2. Budgeting — not started.** See "Next steps" below.
 
-**3. Dashboard & Insights — ✅ COMPLETE**, all 10 tasks implemented on
-branch `worktree-dashboard-insights` (not yet merged to `main` as of this
-commit — final whole-branch review runs next, then merge). Plan:
+**3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
+(fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
+auto-deploys on push). Plan:
 `docs/superpowers/plans/2026-08-19-dashboard-insights.md` (10 tasks, all
 implemented via superpowers:subagent-driven-development in a dedicated
-worktree, all task-level reviews clean). Design:
+worktree, all task-level reviews clean, final whole-branch review clean
+after one fix round — 1 Critical finding, bottom-nav text nearly
+invisible on the new dark Home tab at 1.07:1 contrast, plus a few
+Important/Minor spec-compliance gaps, all fixed and re-reviewed). Design:
 `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`.
 
 Shipped: the real `/dashboard` page — auto-generated insights (5 rule
@@ -182,15 +185,11 @@ process used for Transactions core and Dashboard & Insights.
 
 ## How to resume in a new session
 
-Sub-project 1 (Transactions core) is done and merged to `main` (live in
-production, Vercel auto-deploys on push). Sub-project 3 (Dashboard &
-Insights) has all 10 tasks implemented and reviewed on its own branch —
-if you're reading this before it's merged, finish that (final
-whole-branch review, then merge to `main` and push) before starting
-anything else. Once it's merged, sub-project 2 (Budgeting) is next in the
-stated sequence and has **no design spec or plan yet** — start there with
-superpowers:brainstorming,
-using "Next steps to complete the app" above and the cross-session memory
-system (spreadsheet structure analysis, the user's stated feature wants)
-as input. Full remaining sequence:
+Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
+done and merged to `main` (live in production, Vercel auto-deploys on
+push). Sub-project 2 (Budgeting) is next in the stated sequence and has
+**no design spec or plan yet** — start there with
+superpowers:brainstorming, using "Next steps to complete the app" above
+and the cross-session memory system (spreadsheet structure analysis, the
+user's stated feature wants) as input. Full remaining sequence:
 `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
