@@ -1,7 +1,7 @@
 import { formatCurrency } from '@/lib/format'
 import { TAPPABLE_CLASS } from '@/lib/motion'
 
-const CARD_COLORS = ['#f0b854', '#9cbaf0', '#d99fc0', '#6cd3a5']
+const CARD_COLORS = ['#f0b854', '#9cbaf0', '#d99fc0', '#9aa3b8']
 
 export function AccountCardsRow({ accounts }: { accounts: Array<{ id: string; name: string; balance: number }> }) {
   return (
