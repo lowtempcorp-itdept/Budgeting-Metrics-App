@@ -1,9 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeAccountBalances } from '@/lib/transactions'
 import { currentMonthInManila, todayInManila } from '@/lib/date'
+import { computeInsights, type InsightAccount, type InsightExpenseRow, type InsightBudgetRow } from '@/lib/insights'
 import { fraunces, workSans, ibmPlexMono } from './fonts'
 import { Masthead } from './Masthead'
 import { HeroKpis } from './HeroKpis'
+import { InsightsPanel } from './InsightsPanel'
+import { AccountCardsRow } from './AccountCardsRow'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -59,6 +62,41 @@ export default async function DashboardPage() {
 
   const displayName = (user?.user_metadata?.full_name as string | undefined)?.trim() || 'Your Ledger'
 
+  const categories = categoriesResult.data ?? []
+  const categoryNames = Object.fromEntries(categories.map((c) => [c.id, c.name]))
+
+  const lastActivityByAccount = new Map<string, string>()
+  for (const row of [...income, ...expenses]) {
+    const prev = lastActivityByAccount.get(row.account_id)
+    if (!prev || row.occurred_on > prev) lastActivityByAccount.set(row.account_id, row.occurred_on)
+  }
+
+  const insightAccounts: InsightAccount[] = accounts.map((a) => ({
+    id: a.id,
+    name: a.name,
+    archived: a.archived,
+    lastActivityOn: lastActivityByAccount.get(a.id) ?? null,
+  }))
+  const insightExpenses: InsightExpenseRow[] = expenses.map((e) => ({
+    occurredOn: e.occurred_on,
+    amount: e.amount,
+    categoryId: e.category_id,
+    notes: e.notes,
+    isAdjustment: e.is_adjustment,
+  }))
+  const insightBudgets: InsightBudgetRow[] = budgets.map((b) => ({ month: b.month, plannedAmount: b.planned_amount }))
+
+  const insights = computeInsights({
+    expenses: insightExpenses,
+    categoryNames,
+    accounts: insightAccounts,
+    budgets: insightBudgets,
+  })
+
+  const accountCards = accounts
+    .filter((a) => !a.archived)
+    .map((a) => ({ id: a.id, name: a.name, balance: balances[a.id] ?? 0 }))
+
   return (
     <div className={`dash-ground -m-4 mb-[-6rem] min-h-[calc(100vh-8rem)] p-4 pb-28 ${fraunces.variable} ${workSans.variable} ${ibmPlexMono.variable}`}>
       <div className="mx-auto flex max-w-xl flex-col gap-4">
@@ -70,11 +108,8 @@ export default async function DashboardPage() {
           netMtd={netMtd}
           budgetPercentUsed={budgetPercentUsed}
         />
-        {income.length === 0 && expenses.length === 0 && (
-          <p className="font-ledger-sans dash-panel rounded-2xl p-5 text-sm text-[#c3c9dd]">
-            Add your first transaction to see insights here.
-          </p>
-        )}
+        <InsightsPanel insights={insights} />
+        <AccountCardsRow accounts={accountCards} />
       </div>
     </div>
   )
