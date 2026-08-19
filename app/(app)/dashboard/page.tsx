@@ -2,11 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { computeAccountBalances } from '@/lib/transactions'
 import { currentMonthInManila, todayInManila } from '@/lib/date'
 import { computeInsights, type InsightAccount, type InsightExpenseRow, type InsightBudgetRow } from '@/lib/insights'
+import { computeNetByTicker } from '@/lib/portfolio'
 import { fraunces, workSans, ibmPlexMono } from './fonts'
 import { Masthead } from './Masthead'
 import { HeroKpis } from './HeroKpis'
 import { InsightsPanel } from './InsightsPanel'
 import { AccountCardsRow } from './AccountCardsRow'
+import { PortfolioSummary } from './PortfolioSummary'
+import { CategoryBars } from './CategoryBars'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -97,6 +100,21 @@ export default async function DashboardPage() {
     .filter((a) => !a.archived)
     .map((a) => ({ id: a.id, name: a.name, balance: balances[a.id] ?? 0 }))
 
+  const portfolio = portfolioResult.data ?? []
+  const portfolioPositions = computeNetByTicker(
+    portfolio.map((p) => ({ type: p.type, ticker: p.ticker, company: p.company, amount: p.amount }))
+  )
+
+  const categoryNamesById = new Map(categories.map((c) => [c.id, c.name]))
+  const mtdCategoryTotals = new Map<string, number>()
+  for (const row of expenses) {
+    if (row.is_adjustment || row.category_id === null || !row.occurred_on.startsWith(monthPrefix)) continue
+    mtdCategoryTotals.set(row.category_id, (mtdCategoryTotals.get(row.category_id) ?? 0) + row.amount)
+  }
+  const categoryBars = [...mtdCategoryTotals.entries()]
+    .map(([id, amount]) => ({ name: categoryNamesById.get(id) ?? 'Unknown', amount }))
+    .sort((a, b) => b.amount - a.amount)
+
   return (
     <div className={`dash-ground -m-4 mb-[-6rem] min-h-[calc(100vh-8rem)] p-4 pb-28 ${fraunces.variable} ${workSans.variable} ${ibmPlexMono.variable}`}>
       <div className="mx-auto flex max-w-xl flex-col gap-4">
@@ -110,6 +128,8 @@ export default async function DashboardPage() {
         />
         <InsightsPanel insights={insights} />
         <AccountCardsRow accounts={accountCards} />
+        <PortfolioSummary positions={portfolioPositions} />
+        <CategoryBars categories={categoryBars} />
       </div>
     </div>
   )
