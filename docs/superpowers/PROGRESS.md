@@ -114,7 +114,7 @@ deleted after merge per its own convention; git history is the record now.
   Re-inject after every full page navigation (the override doesn't
   survive one) — it does survive Server Action-driven soft refreshes.
 
-## Transactions core sub-project: ✅ COMPLETE — PR open, ready to merge
+## Transactions core sub-project: ✅ COMPLETE — merged to `main` 2026-08-19
 
 First of 5 sub-projects breaking down the post-foundation UI work. Full
 sequence: **Transactions core** (this one) → Budgeting → Dashboard &
@@ -122,8 +122,17 @@ Insights → Portfolio → Historical migration. Plan:
 `docs/superpowers/plans/2026-08-18-transactions-core.md` (9 tasks, all 9
 implemented via superpowers:subagent-driven-development, all task-level
 reviews clean, final whole-branch review clean after one fix round).
-Branch `worktree-transactions-core`, worktree at
-`.claude/worktrees/transactions-core`, PR open against `main`.
+
+Merged to `main` 2026-08-19 via fast-forward (`main` hadn't moved since
+the branch diverged, so no merge commit was needed) — `e80c239..38fb35e`,
+pushed to `origin/main`, which triggers Vercel auto-deploy. Local branch
+`worktree-transactions-core` deleted after merge (same convention as
+`foundation-plan`); `origin/worktree-transactions-core` kept on GitHub.
+The worktree at `.claude/worktrees/transactions-core` was unregistered
+from git (`git worktree remove` cleared the metadata) but the directory
+itself resisted deletion — "used by another process" — something
+(terminal/editor) likely still has it open as a cwd. Not tracked by git
+anymore either way; delete by hand once whatever's holding it is closed.
 
 **Migration applied 2026-08-19.** One pre-existing junk row blocked the
 first attempt: `scripts/verify-transactions-core-migration.ts`'s
@@ -276,22 +285,18 @@ is in the cross-session memory system, not this repo.
 
 ## How to resume in a new session
 
-The foundation plan is done and live. The Transactions core sub-project's
-code is done, whole-branch-reviewed (opus, one fix-and-re-review round),
-migration applied to the live Supabase project, manually verified clean
-end-to-end (see above), and pushed to `origin/worktree-transactions-core`
-— see `git log` on that branch for the full commit history. **A PR is
-open against `main`; it just needs a human to click merge.** Not merged
-by any agent session, since merging is a one-way trigger (Vercel
-auto-deploys `main` on every push) — that decision is left to the human.
+The foundation plan and the Transactions core sub-project are both done
+and merged to `main` (live in production, Vercel auto-deploys on push).
+Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio, Historical
+migration) are still unscoped — see "Product direction for the NEXT plan"
+above. Budgeting is next in the stated sequence, but Dashboard & Insights
+already has two visual directions mocked up (see above) and is a
+reasonable place to pick back up.
 
-1. Merge the PR (or ask an agent session to merge it — nothing left
-   blocks it).
-2. After merging: delete the SDD ledger workspace
-   (`.superpowers/sdd/2026-08-18-transactions-core/`, gitignored scratch,
-   not yet deleted as of this note since the branch wasn't merged when it
-   was written) and delete the worktree
-   (`.claude/worktrees/transactions-core`) if nothing else needs it.
-3. Sub-projects 2-5 (Budgeting, Dashboard & Insights, Portfolio,
-   Historical migration) are still unscoped — see "Product direction for
-   the NEXT plan" below. Budgeting is next in the stated sequence.
+1. Settle on a Dashboard & Insights direction (or a blend) via
+   superpowers:brainstorming, referencing the Passbook/Wallet artifact
+   above, then write the design spec + implementation plan the way
+   Transactions core got one, before building.
+2. After that's built and merged, move to Budgeting (schema additions
+   for two-granularity budgets, income-anchored budgets, recurring
+   "constants" — see "New feature requirements" above).
