@@ -43,7 +43,7 @@ export function ShellChrome({ children }: { children: ReactNode }) {
         }`}
       >
         {NAV_ITEMS.map((item) => (
-          <NavLink key={item.href} href={item.href} label={item.label} />
+          <NavLink key={item.href} href={item.href} label={item.label} isDark={isHome} />
         ))}
       </nav>
     </div>

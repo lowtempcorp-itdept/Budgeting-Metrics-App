@@ -137,7 +137,7 @@ function topRecurringCategory(
 
   return {
     kind: 'top-category',
-    categoryName: (winnerId && categoryNames[winnerId]) || 'Unknown',
+    categoryName: (winnerId && categoryNames[winnerId]) || 'Uncategorized',
     toppedMonths: winnerToppedCount,
     windowMonths: WINDOW_MONTHS,
     averagePerMonth: winnerTotal / WINDOW_MONTHS,

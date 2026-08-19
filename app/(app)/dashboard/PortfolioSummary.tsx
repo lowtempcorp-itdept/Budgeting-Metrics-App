@@ -18,7 +18,6 @@ export function PortfolioSummary({ positions }: { positions: TickerNetPosition[]
           {positions.map((position, i) => (
             <div
               key={position.label}
-              tabIndex={0}
               className={`${TAPPABLE_CLASS} font-ledger-sans flex items-center gap-2.5 py-1.5 text-[13px] text-[#ece6d8] ${
                 i > 0 ? 'border-t border-white/10' : ''
               }`}
@@ -28,7 +27,9 @@ export function PortfolioSummary({ positions }: { positions: TickerNetPosition[]
                 style={{ background: DOT_COLORS[i % DOT_COLORS.length] }}
               />
               <span className="flex-1">{position.label}</span>
-              <span className="font-ledger-mono font-semibold">{formatCurrency(position.netAmount)} net in</span>
+              <span className="font-ledger-mono font-semibold">
+                {formatCurrency(Math.abs(position.netAmount))} net {position.netAmount >= 0 ? 'in' : 'out'}
+              </span>
             </div>
           ))}
         </div>

@@ -55,7 +55,11 @@ export default async function DashboardPage({
     income.map((row) => ({ accountId: row.account_id, amount: row.amount })),
     expenses.map((row) => ({ accountId: row.account_id, amount: row.amount }))
   )
-  const total = Object.values(balances).reduce((sum, b) => sum + b, 0)
+  const activeAccountIds = new Set(accounts.filter((a) => !a.archived).map((a) => a.id))
+  const total = Object.entries(balances).reduce(
+    (sum, [accountId, b]) => (activeAccountIds.has(accountId) ? sum + b : sum),
+    0
+  )
 
   const currentMonth = currentMonthInManila()
   const monthPrefix = currentMonth.slice(0, 7)
@@ -125,9 +129,19 @@ export default async function DashboardPage({
     if (row.is_adjustment || row.category_id === null || !row.occurred_on.startsWith(monthPrefix)) continue
     mtdCategoryTotals.set(row.category_id, (mtdCategoryTotals.get(row.category_id) ?? 0) + row.amount)
   }
-  const categoryBars = [...mtdCategoryTotals.entries()]
-    .map(([id, amount]) => ({ name: categoryNamesById.get(id) ?? 'Unknown', amount }))
+  const sortedCategoryTotals = [...mtdCategoryTotals.entries()]
+    .map(([id, amount]) => ({ name: categoryNamesById.get(id) ?? 'Uncategorized', amount }))
     .sort((a, b) => b.amount - a.amount)
+  const categoryBars =
+    sortedCategoryTotals.length > 5
+      ? [
+          ...sortedCategoryTotals.slice(0, 5),
+          {
+            name: `Other (${sortedCategoryTotals.length - 5})`,
+            amount: sortedCategoryTotals.slice(5).reduce((sum, c) => sum + c.amount, 0),
+          },
+        ]
+      : sortedCategoryTotals
 
   const trendPoints = computeTrend(
     trendMonths,

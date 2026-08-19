@@ -1,5 +1,4 @@
 import { CountUp } from './CountUp'
-import { formatCurrency } from '@/lib/format'
 
 export function HeroKpis({
   total,
@@ -27,11 +26,15 @@ export function HeroKpis({
       <div className="flex">
         <div className="flex-1 border-l border-white/15 pl-4 first:border-l-0 first:pl-0">
           <p className="font-ledger-sans text-[9.5px] uppercase tracking-[0.08em] text-[#b9bdcb]">Income (MTD)</p>
-          <p className="text-[18px] font-semibold text-[#6cd3a5]">{formatCurrency(incomeMtd)}</p>
+          <p className="text-[18px] font-semibold text-[#6cd3a5]">
+            <CountUp value={incomeMtd} />
+          </p>
         </div>
         <div className="flex-1 border-l border-white/15 pl-4">
           <p className="font-ledger-sans text-[9.5px] uppercase tracking-[0.08em] text-[#b9bdcb]">Expenses (MTD)</p>
-          <p className="text-[18px] font-semibold text-[#ed8264]">{formatCurrency(expenseMtd)}</p>
+          <p className="text-[18px] font-semibold text-[#ed8264]">
+            <CountUp value={expenseMtd} />
+          </p>
           {budgetPercentUsed !== null && (
             <p className="font-ledger-sans mt-1 text-[11px] text-[#b9bdcb]">{budgetPercentUsed}% of budget used</p>
           )}
@@ -39,7 +42,7 @@ export function HeroKpis({
         <div className="flex-1 border-l border-white/15 pl-4">
           <p className="font-ledger-sans text-[9.5px] uppercase tracking-[0.08em] text-[#b9bdcb]">Net (MTD)</p>
           <p className={`text-[18px] font-semibold ${netMtd < 0 ? 'text-[#ed8264]' : 'text-[#6cd3a5]'}`}>
-            {formatCurrency(netMtd)}
+            <CountUp value={netMtd} />
           </p>
         </div>
       </div>

@@ -11,7 +11,6 @@ export function AccountCardsRow({ accounts }: { accounts: Array<{ id: string; na
         {accounts.map((account, i) => (
           <div
             key={account.id}
-            tabIndex={0}
             className={`${TAPPABLE_CLASS} w-32 flex-none rounded-2xl border border-white/10 bg-white/5 p-3`}
           >
             <div
