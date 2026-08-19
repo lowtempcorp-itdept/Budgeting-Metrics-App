@@ -1,17 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { logout } from './actions'
-import { NavLink } from './NavLink'
+import { ShellChrome } from './ShellChrome'
 import { QuickAddProvider } from './quick-add/QuickAddProvider'
 import { mostRecentAccountId, rankCategoriesByUsage } from '@/lib/transactions'
-
-const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Home' },
-  { href: '/transactions', label: 'Transactions' },
-  { href: '/budget', label: 'Budget' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/accounts', label: 'Accounts' },
-]
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -63,24 +54,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       defaultAccountId={defaultAccountId}
       rankedCategoryIds={rankedCategoryIds}
     >
-      <div className="flex min-h-screen flex-col bg-slate-50">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3">
-          <span className="font-semibold text-slate-900">Personal Finance</span>
-          <form action={logout}>
-            <button type="submit" className="text-sm text-slate-500 hover:text-slate-900">
-              Log out
-            </button>
-          </form>
-        </header>
-
-        <main className="flex-1 p-4 pb-24">{children}</main>
-
-        <nav className="sticky bottom-0 grid grid-cols-5 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} href={item.href} label={item.label} />
-          ))}
-        </nav>
-      </div>
+      <ShellChrome>{children}</ShellChrome>
     </QuickAddProvider>
   )
 }
