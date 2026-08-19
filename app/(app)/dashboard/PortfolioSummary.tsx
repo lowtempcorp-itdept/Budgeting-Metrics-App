@@ -1,11 +1,12 @@
 import { formatCurrency } from '@/lib/format'
 import type { TickerNetPosition } from '@/lib/portfolio'
+import { TAPPABLE_CLASS } from '@/lib/motion'
 
 const DOT_COLORS = ['#9cbaf0', '#f0b854', '#d99fc0', '#9aa3b8']
 
 export function PortfolioSummary({ positions }: { positions: TickerNetPosition[] }) {
   return (
-    <div className="dash-panel dash-enter rounded-2xl p-5">
+    <div className="dash-panel rounded-2xl p-5">
       <h2 className="font-ledger-serif mb-3 flex items-baseline justify-between text-[16px] text-[#f9f6ee]">
         Portfolio
         <span className="font-ledger-sans text-[11px] font-normal text-[#b9bdcb]">Money moved, not live value</span>
@@ -17,7 +18,8 @@ export function PortfolioSummary({ positions }: { positions: TickerNetPosition[]
           {positions.map((position, i) => (
             <div
               key={position.label}
-              className={`font-ledger-sans flex items-center gap-2.5 py-1.5 text-[13px] text-[#ece6d8] ${
+              tabIndex={0}
+              className={`${TAPPABLE_CLASS} font-ledger-sans flex items-center gap-2.5 py-1.5 text-[13px] text-[#ece6d8] ${
                 i > 0 ? 'border-t border-white/10' : ''
               }`}
             >

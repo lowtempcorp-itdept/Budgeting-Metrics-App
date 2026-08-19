@@ -60,14 +60,14 @@ function describe(insight: Insight): React.ReactNode {
 export function InsightsPanel({ insights }: { insights: Insight[] }) {
   if (insights.length < 2) {
     return (
-      <div className="dash-panel dash-enter font-ledger-sans rounded-2xl p-5 text-sm text-[#c3c9dd]">
+      <div className="dash-panel font-ledger-sans rounded-2xl p-5 text-sm text-[#c3c9dd]">
         Add more transactions to see insights here.
       </div>
     )
   }
 
   return (
-    <div className="dash-panel dash-enter rounded-2xl p-5">
+    <div className="dash-panel rounded-2xl p-5">
       <h2 className="font-ledger-serif mb-3 flex items-baseline justify-between text-[16px] text-[#f9f6ee]">
         What stood out
         <span className="font-ledger-sans text-[11px] font-normal text-[#b9bdcb]">Auto-generated</span>

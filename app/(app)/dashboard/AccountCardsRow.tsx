@@ -5,7 +5,7 @@ const CARD_COLORS = ['#f0b854', '#9cbaf0', '#d99fc0', '#9aa3b8']
 
 export function AccountCardsRow({ accounts }: { accounts: Array<{ id: string; name: string; balance: number }> }) {
   return (
-    <div className="dash-panel dash-enter rounded-2xl p-5">
+    <div className="dash-panel rounded-2xl p-5">
       <h2 className="font-ledger-serif mb-3 text-[16px] text-[#f9f6ee]">By account</h2>
       <div className="flex gap-2.5 overflow-x-auto pb-1">
         {accounts.map((account, i) => (

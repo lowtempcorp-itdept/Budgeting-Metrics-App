@@ -4,7 +4,7 @@ export function CategoryBars({ categories }: { categories: Array<{ name: string;
   const max = Math.max(...categories.map((c) => c.amount), 1)
 
   return (
-    <div className="dash-panel dash-enter rounded-2xl p-5">
+    <div className="dash-panel rounded-2xl p-5">
       <h2 className="font-ledger-serif mb-3 flex items-baseline justify-between text-[16px] text-[#f9f6ee]">
         By category
         <span className="font-ledger-sans text-[11px] font-normal text-[#b9bdcb]">MTD</span>
