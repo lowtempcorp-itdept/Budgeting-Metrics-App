@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { postDueRecurringConstants } from '@/lib/recurring-catchup'
 import { ShellChrome } from './ShellChrome'
 import { QuickAddProvider } from './quick-add/QuickAddProvider'
 import { mostRecentAccountId, rankCategoriesByUsage } from '@/lib/transactions'
@@ -13,6 +14,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!user) {
     redirect('/login')
   }
+
+  await postDueRecurringConstants(supabase)
 
   const ninetyDaysAgo = new Date()
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
