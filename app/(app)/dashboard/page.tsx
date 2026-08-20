@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { computeAccountBalances } from '@/lib/transactions'
 import { currentMonthInManila, todayInManila } from '@/lib/date'
-import { computeInsights, type InsightAccount, type InsightExpenseRow, type InsightBudgetRow } from '@/lib/insights'
+import {
+  computeInsights,
+  type InsightAccount,
+  type InsightExpenseRow,
+  type InsightBudgetRow,
+  type InsightWeeklyBudgetRow,
+} from '@/lib/insights'
 import { computeNetByTicker } from '@/lib/portfolio'
 import { computeTrend } from '@/lib/trend'
 import { STAGGER_DELAYS_MS } from '@/lib/motion'
@@ -31,7 +37,7 @@ export default async function DashboardPage({
     data: { user },
   } = await supabase.auth.getUser()
 
-  const [accountsResult, categoriesResult, incomeResult, expensesResult, budgetsResult, portfolioResult] =
+  const [accountsResult, categoriesResult, incomeResult, expensesResult, budgetsResult, portfolioResult, weeklyBudgetsResult] =
     await Promise.all([
       supabase.from('accounts').select('id, name, archived').order('name'),
       supabase.from('categories').select('id, name'),
@@ -39,9 +45,10 @@ export default async function DashboardPage({
       supabase.from('expenses').select('occurred_on, amount, account_id, category_id, notes, is_adjustment'),
       supabase.from('budgets').select('month, planned_amount'),
       supabase.from('portfolio_transactions').select('type, ticker, company, amount'),
+      supabase.from('weekly_budgets').select('week_start, planned_amount'),
     ])
 
-  for (const result of [accountsResult, categoriesResult, incomeResult, expensesResult, budgetsResult, portfolioResult]) {
+  for (const result of [accountsResult, categoriesResult, incomeResult, expensesResult, budgetsResult, portfolioResult, weeklyBudgetsResult]) {
     if (result.error) throw new Error(result.error.message)
   }
 
@@ -107,11 +114,17 @@ export default async function DashboardPage({
   }))
   const insightBudgets: InsightBudgetRow[] = budgets.map((b) => ({ month: b.month, plannedAmount: b.planned_amount }))
 
+  const insightWeeklyBudgets: InsightWeeklyBudgetRow[] = (weeklyBudgetsResult.data ?? []).map((w) => ({
+    weekStart: w.week_start,
+    plannedAmount: w.planned_amount,
+  }))
+
   const insights = computeInsights({
     expenses: insightExpenses,
     categoryNames,
     accounts: insightAccounts,
     budgets: insightBudgets,
+    weeklyBudgets: insightWeeklyBudgets,
   })
 
   const accountCards = accounts

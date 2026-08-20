@@ -7,6 +7,7 @@ const MARKS: Record<Insight['kind'], string> = {
   'top-category': '★',
   'dormant-account': '–',
   'months-under-budget': '✓',
+  'weekly-budget-pace': '◆',
 }
 
 function monthLabel(month: string): string {
@@ -54,6 +55,17 @@ function describe(insight: Insight): React.ReactNode {
           You stayed under budget in <strong>{insight.underCount} of the last {insight.consideredCount}</strong> months.
         </>
       )
+    case 'weekly-budget-pace': {
+      const pacing = insight.projected <= insight.budget ? 'under' : 'over'
+      return (
+        <>
+          You&rsquo;re pacing <strong>{pacing} budget</strong> this week —{' '}
+          <span className="font-ledger-mono">{formatCurrency(insight.spentSoFar)}</span> spent so far, projected to
+          land near <span className="font-ledger-mono">{formatCurrency(insight.projected)}</span> against a{' '}
+          <span className="font-ledger-mono">{formatCurrency(insight.budget)}</span> weekly budget.
+        </>
+      )
+    }
   }
 }
 

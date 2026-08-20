@@ -1,4 +1,5 @@
 import { currentMonthInManila, monthsAgoInManila, todayInManila } from './date'
+import { mondayOfWeek, addDays } from './weekly-budget'
 
 const WINDOW_MONTHS = 6
 const DORMANT_THRESHOLD_DAYS = 10
@@ -23,18 +24,25 @@ export type InsightBudgetRow = {
   plannedAmount: number
 }
 
+export type InsightWeeklyBudgetRow = {
+  weekStart: string
+  plannedAmount: number
+}
+
 export type Insight =
   | { kind: 'highest-spend-month'; month: string; monthTotal: number; topLabel: string; topAmount: number }
   | { kind: 'budget-pace'; spentSoFar: number; projected: number; budget: number }
   | { kind: 'top-category'; categoryName: string; toppedMonths: number; windowMonths: number; averagePerMonth: number }
   | { kind: 'dormant-account'; accountName: string; daysSinceActivity: number }
   | { kind: 'months-under-budget'; underCount: number; consideredCount: number }
+  | { kind: 'weekly-budget-pace'; spentSoFar: number; projected: number; budget: number }
 
 export type ComputeInsightsInput = {
   expenses: InsightExpenseRow[]
   categoryNames: Record<string, string>
   accounts: InsightAccount[]
   budgets: InsightBudgetRow[]
+  weeklyBudgets?: InsightWeeklyBudgetRow[]
   referenceDate?: Date
 }
 
@@ -88,6 +96,27 @@ function budgetPace(expenses: InsightExpenseRow[], budgets: InsightBudgetRow[], 
   const projected = (spentSoFar / dayOfMonth) * daysInMonth
 
   return { kind: 'budget-pace', spentSoFar, projected, budget }
+}
+
+function weeklyBudgetPace(
+  expenses: InsightExpenseRow[],
+  weeklyBudgets: InsightWeeklyBudgetRow[],
+  referenceDate: Date
+): Insight | null {
+  const today = todayInManila(referenceDate)
+  const currentWeekStart = mondayOfWeek(today)
+  const budget = weeklyBudgets.find((w) => w.weekStart === currentWeekStart)?.plannedAmount
+  if (!budget) return null
+
+  const weekEnd = addDays(currentWeekStart, 6)
+  const spentSoFar = expenses
+    .filter((e) => !e.isAdjustment && e.occurredOn >= currentWeekStart && e.occurredOn <= weekEnd)
+    .reduce((sum, e) => sum + e.amount, 0)
+
+  const dayOfWeek = daysBetween(currentWeekStart, today) + 1 // 1..7
+  const projected = (spentSoFar / dayOfWeek) * 7
+
+  return { kind: 'weekly-budget-pace', spentSoFar, projected, budget }
 }
 
 function topRecurringCategory(
@@ -185,6 +214,7 @@ export function computeInsights(input: ComputeInsightsInput): Insight[] {
     topRecurringCategory(input.expenses, monthKeys, input.categoryNames),
     dormantAccount(input.accounts, referenceDate),
     monthsUnderBudget(input.expenses, input.budgets, monthKeys),
+    weeklyBudgetPace(input.expenses, input.weeklyBudgets ?? [], referenceDate),
   ]
 
   return results.filter((insight): insight is Insight => insight !== null)

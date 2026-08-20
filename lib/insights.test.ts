@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { computeInsights, type InsightExpenseRow, type InsightAccount, type InsightBudgetRow } from './insights'
+import {
+  computeInsights,
+  type InsightExpenseRow,
+  type InsightAccount,
+  type InsightBudgetRow,
+  type InsightWeeklyBudgetRow,
+} from './insights'
 
 const reference = new Date('2026-08-19T02:00:00Z') // Aug 19, 2026 in Manila — matches the design spec's worked example
 
@@ -167,5 +173,45 @@ describe('computeInsights — overall', () => {
   it('returns fewer than 2 insights when there is no transaction history at all', () => {
     const insights = computeInsights({ expenses: [], categoryNames: {}, accounts: [], budgets: [], referenceDate: reference })
     expect(insights.length).toBeLessThan(2)
+  })
+})
+
+describe('computeInsights — weekly-budget-pace', () => {
+  it('reports pacing under budget', () => {
+    const expenses = [expense({ occurredOn: '2026-08-18', amount: 400 })] // Tue of the Aug 17-23 week, day 2 of 7
+    const weeklyBudgets: InsightWeeklyBudgetRow[] = [{ weekStart: '2026-08-17', plannedAmount: 3000 }]
+    const insights = computeInsights({
+      expenses,
+      categoryNames,
+      accounts: [],
+      budgets: [],
+      weeklyBudgets,
+      referenceDate: reference,
+    })
+    const found = insights.find((i) => i.kind === 'weekly-budget-pace')
+    expect(found).toMatchObject({ kind: 'weekly-budget-pace', spentSoFar: 400, budget: 3000 })
+    if (found?.kind === 'weekly-budget-pace') expect(found.projected).toBeLessThan(found.budget)
+  })
+
+  it('reports pacing over budget', () => {
+    const expenses = [expense({ occurredOn: '2026-08-18', amount: 2000 })]
+    const weeklyBudgets: InsightWeeklyBudgetRow[] = [{ weekStart: '2026-08-17', plannedAmount: 3000 }]
+    const insights = computeInsights({
+      expenses,
+      categoryNames,
+      accounts: [],
+      budgets: [],
+      weeklyBudgets,
+      referenceDate: reference,
+    })
+    const found = insights.find((i) => i.kind === 'weekly-budget-pace')
+    if (found?.kind === 'weekly-budget-pace') expect(found.projected).toBeGreaterThan(found.budget)
+    else throw new Error('expected a weekly-budget-pace insight')
+  })
+
+  it('is omitted when there is no weekly budget row for the current week', () => {
+    const expenses = [expense({ occurredOn: '2026-08-18', amount: 100 })]
+    const insights = computeInsights({ expenses, categoryNames, accounts: [], budgets: [], referenceDate: reference })
+    expect(insights.find((i) => i.kind === 'weekly-budget-pace')).toBeUndefined()
   })
 })
