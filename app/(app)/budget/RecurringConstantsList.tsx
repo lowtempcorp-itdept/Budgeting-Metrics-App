@@ -30,6 +30,17 @@ export function RecurringConstantsList({
     })
   }
 
+  function handlePause(id: string) {
+    setActionError(null)
+    startTransition(async () => {
+      try {
+        await setRecurringConstantActive(id, false)
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : 'Failed to pause.')
+      }
+    })
+  }
+
   const editingRecord = editingId && editingId !== 'new' ? constants.find((c) => c.id === editingId) ?? null : null
 
   return (
@@ -65,11 +76,14 @@ export function RecurringConstantsList({
                 <button type="button" onClick={() => setEditingId(c.id)} className="text-slate-500 hover:text-slate-900">
                   Edit
                 </button>
-                <form action={setRecurringConstantActive.bind(null, c.id, false)}>
-                  <button type="submit" className="text-slate-500 hover:text-slate-900">
-                    Pause
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={() => handlePause(c.id)}
+                  disabled={isPending}
+                  className="text-slate-500 hover:text-slate-900"
+                >
+                  Pause
+                </button>
                 <button type="button" onClick={() => handleDelete(c.id)} disabled={isPending} className="text-red-600 hover:text-red-800">
                   Delete
                 </button>

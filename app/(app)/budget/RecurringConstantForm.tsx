@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { addRecurringConstant, updateRecurringConstant, type RecurringConstantFormState } from './recurring-actions'
 
 export type RecurringConstantRecord = {
@@ -34,9 +34,11 @@ export function RecurringConstantForm({
   const action = editing ? updateRecurringConstant.bind(null, editing.id) : addRecurringConstant
   const [state, formAction, pending] = useActionState(action, initialState)
 
-  if (state.submitted && state.error === null) {
-    onDone()
-  }
+  useEffect(() => {
+    if (state.submitted && state.error === null) {
+      onDone()
+    }
+  }, [state, onDone])
 
   return (
     <form action={formAction} className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
