@@ -4,6 +4,7 @@ import { mondayOfWeek, addDays, needsNextWeekReminder } from '@/lib/weekly-budge
 import { WeeklyBudgetCard } from './WeeklyBudgetCard'
 import { ReminderBanner } from './ReminderBanner'
 import { CategoryBudgetTable } from './CategoryBudgetTable'
+import { RecurringConstantsList } from './RecurringConstantsList'
 
 export default async function BudgetPage({
   searchParams,
@@ -17,15 +18,30 @@ export default async function BudgetPage({
 
   const supabase = await createClient()
 
-  const [weeklyBudgetsResult, incomeResult, expensesResult, budgetsResult, categoriesResult] = await Promise.all([
-    supabase.from('weekly_budgets').select('week_start, planned_amount'),
-    supabase.from('income').select('occurred_on, amount, is_adjustment'),
-    supabase.from('expenses').select('occurred_on, amount, category_id, is_adjustment'),
-    supabase.from('budgets').select('month, category_id, planned_amount'),
-    supabase.from('categories').select('id, name, archived').order('name'),
-  ])
+  const [weeklyBudgetsResult, incomeResult, expensesResult, budgetsResult, categoriesResult, accountsResult, recurringResult] =
+    await Promise.all([
+      supabase.from('weekly_budgets').select('week_start, planned_amount'),
+      supabase.from('income').select('occurred_on, amount, is_adjustment'),
+      supabase.from('expenses').select('occurred_on, amount, category_id, is_adjustment'),
+      supabase.from('budgets').select('month, category_id, planned_amount'),
+      supabase.from('categories').select('id, name, archived').order('name'),
+      supabase.from('accounts').select('id, name, archived').order('name'),
+      supabase
+        .from('recurring_constants')
+        .select('id, kind, amount, frequency, day_of_month, month_of_year, account_id, category_id, source, notes')
+        .eq('active', true)
+        .order('created_at'),
+    ])
 
-  for (const result of [weeklyBudgetsResult, incomeResult, expensesResult, budgetsResult, categoriesResult]) {
+  for (const result of [
+    weeklyBudgetsResult,
+    incomeResult,
+    expensesResult,
+    budgetsResult,
+    categoriesResult,
+    accountsResult,
+    recurringResult,
+  ]) {
     if (result.error) throw new Error(result.error.message)
   }
 
@@ -34,6 +50,19 @@ export default async function BudgetPage({
   const expenses = expensesResult.data ?? []
   const budgets = budgetsResult.data ?? []
   const categories = categoriesResult.data ?? []
+  const accounts = accountsResult.data ?? []
+  const recurringConstants = (recurringResult.data ?? []).map((r) => ({
+    id: r.id,
+    kind: r.kind as 'expense' | 'income',
+    amount: r.amount,
+    frequency: r.frequency as 'monthly' | 'yearly',
+    dayOfMonth: r.day_of_month,
+    monthOfYear: r.month_of_year,
+    accountId: r.account_id,
+    categoryId: r.category_id,
+    source: r.source,
+    notes: r.notes,
+  }))
 
   const weekEnd = addDays(requestedWeek, 6)
   const plannedAmount = weeklyBudgets.find((w) => w.week_start === requestedWeek)?.planned_amount ?? null
@@ -62,6 +91,8 @@ export default async function BudgetPage({
   }))
   const budgetedCategoryIds = new Set(monthBudgets.map((b) => b.category_id))
   const unbudgetedCategories = categories.filter((c) => !c.archived && !budgetedCategoryIds.has(c.id))
+  const activeAccounts = accounts.filter((a) => !a.archived)
+  const activeCategories = categories.filter((c) => !c.archived)
 
   return (
     <div className="space-y-4">
@@ -76,6 +107,7 @@ export default async function BudgetPage({
         isPastWeek={requestedWeek < currentWeekStart}
       />
       <CategoryBudgetTable month={currentMonth} rows={categoryBudgetRows} unbudgetedCategories={unbudgetedCategories} />
+      <RecurringConstantsList constants={recurringConstants} accounts={activeAccounts} categories={activeCategories} />
     </div>
   )
 }
