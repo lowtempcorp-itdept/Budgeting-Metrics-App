@@ -54,11 +54,33 @@ export async function postDueRecurringConstants(supabase: SupabaseClient, refere
         notes: constant.notes,
         recurring_constant_id: constant.id,
       }
-      const { error: insertError } =
-        constant.kind === 'expense'
-          ? await supabase.from('expenses').insert({ ...basePayload, category_id: constant.category_id })
-          : await supabase.from('income').insert({ ...basePayload, source: constant.source })
-      if (insertError) throw new Error(insertError.message)
+      try {
+        const { error: insertError } =
+          constant.kind === 'expense'
+            ? await supabase.from('expenses').insert({ ...basePayload, category_id: constant.category_id })
+            : await supabase.from('income').insert({ ...basePayload, source: constant.source })
+        if (insertError) throw new Error(insertError.message)
+      } catch (insertErr) {
+        // The claim above already advanced next_due_on past dueOn. If the
+        // insert then fails, revert that claim so a future run retries this
+        // occurrence instead of silently losing it from the ledger forever.
+        const insertMessage = insertErr instanceof Error ? insertErr.message : String(insertErr)
+        const { data: reverted, error: revertError } = await supabase
+          .from('recurring_constants')
+          .update({ next_due_on: dueOn })
+          .eq('id', constant.id)
+          .eq('next_due_on', nextDueOn)
+          .select('id')
+        if (revertError || !reverted || reverted.length === 0) {
+          const revertMessage = revertError
+            ? revertError.message
+            : 'no matching row (next_due_on was no longer the claimed value)'
+          throw new Error(
+            `Failed to post recurring constant ${constant.id} for ${dueOn}: ${insertMessage}. Additionally failed to revert the claimed next_due_on back to ${dueOn}: ${revertMessage}. This occurrence may be lost — manual correction required.`
+          )
+        }
+        throw new Error(`Failed to post recurring constant ${constant.id} for ${dueOn}: ${insertMessage}`)
+      }
 
       dueOn = nextDueOn
     }
