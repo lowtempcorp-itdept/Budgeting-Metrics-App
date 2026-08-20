@@ -80,6 +80,19 @@ exemption, FK constraint conflicts) — full detail in git history
   task's type-check gate shows a false-positive unrelated error.
   `.next/types`/`next-env.d.ts` are gitignored, so this is a one-time
   local step per worktree, not a commit.
+- **Don't rely on the cross-session memory system for anything a future
+  session needs to act on.** A 2026-08-20 session found the memory store
+  for this project completely empty even though an earlier session's
+  progress notes said spreadsheet-structure analysis and feature wants
+  were "preserved" there — likely tied to a worktree-scoped session that
+  never persisted. Fix going forward: write everything load-bearing
+  directly into the committed spec/plan docs in `docs/superpowers/`,
+  never leave a doc pointing at memory as the only copy of a decision.
+- **Local `main` can silently fall behind `origin/main`** across
+  sessions/devices (found 64 commits behind on 2026-08-20, all real
+  already-pushed work, fast-forwarded cleanly). Run `git fetch` and check
+  `git status` against `origin/main` at the start of any new session
+  before trusting local git log.
 
 ## Sub-projects 1–3: shipped
 
@@ -96,7 +109,15 @@ and `/transactions` screens with filtering. A few deferred-minor UI items
 (aria attributes, archived rows still appearing in filter dropdowns) were
 never revisited — low risk, worth a look if this area gets touched again.
 
-**2. Budgeting — not started.** See "Next steps" below.
+**2. Budgeting — design spec done, plan not yet written.** Spec:
+`docs/superpowers/specs/2026-08-20-budgeting-design.md`. Required weekly
+overall budget (Mon–Sun, highlighted, monthly/daily are ×4/÷7
+projections, income-anchor leftover/warning, missed-week banner);
+optional per-category monthly budgets (unchanged from v1 design); new
+`recurring_constants` table that auto-posts income/expense rows on
+schedule via a catch-up check in `app/(app)/layout.tsx`. See the spec's
+§10 for explicit non-goals (real push notifications deferred, no
+per-category weekly granularity). Next: superpowers:writing-plans.
 
 **3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
 (fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
@@ -162,13 +183,9 @@ repo — pull it back up when sub-project 5 starts.
 
 In order:
 
-1. **Budgeting (sub-project 2).** Schema additions: two budgeting
-   granularities (a single day, and a month — today's `budgets` table is
-   month-only), budgets anchored to actual entered income (not just a
-   target number), a new "recurring constants" concept for taxes/
-   subscriptions that shouldn't need re-entry every period. Needs its own
-   design spec + plan via superpowers:brainstorming before implementation,
-   same as Dashboard & Insights got.
+1. **Budgeting (sub-project 2).** Design spec done (see above) — needs an
+   implementation plan via superpowers:writing-plans next, then execution
+   via superpowers:subagent-driven-development in a dedicated worktree.
 2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
    transaction management UI (today `portfolio_transactions` only has a
    read-only summary card on the dashboard — no way to add rows to it
@@ -187,9 +204,10 @@ process used for Transactions core and Dashboard & Insights.
 
 Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
 done and merged to `main` (live in production, Vercel auto-deploys on
-push). Sub-project 2 (Budgeting) is next in the stated sequence and has
-**no design spec or plan yet** — start there with
-superpowers:brainstorming, using "Next steps to complete the app" above
-and the cross-session memory system (spreadsheet structure analysis, the
-user's stated feature wants) as input. Full remaining sequence:
+push). Sub-project 2 (Budgeting) has an approved design spec —
+`docs/superpowers/specs/2026-08-20-budgeting-design.md` — but **no
+implementation plan yet**. Start with superpowers:writing-plans reading
+that spec, then execute via superpowers:subagent-driven-development in a
+dedicated worktree (same process used for Transactions core and
+Dashboard & Insights). Full remaining sequence:
 `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
