@@ -93,6 +93,29 @@ exemption, FK constraint conflicts) — full detail in git history
   already-pushed work, fast-forwarded cleanly). Run `git fetch` and check
   `git status` against `origin/main` at the start of any new session
   before trusting local git log.
+- **The real `SEED_USER_EMAIL` is `lowtempcorp.it@gmail.com`** — not the
+  Claude-account email shown in session context. A fresh worktree's
+  `.env.local` is gitignored and won't exist until recreated (copy from
+  another local worktree's `.env.local` if one exists on the same
+  machine, or from the Supabase dashboard) — a 2026-08-20 session copied
+  one forward from an old worktree that was missing `SEED_USER_EMAIL`
+  entirely and had to ask the human to supply the correct value after an
+  incorrect first guess.
+- **A subagent opening its own Claude-in-Chrome tab can invalidate the
+  shared Supabase auth session** (observed 2026-08-20 during the
+  Budgeting build: the human logged in, a subagent created a second tab
+  per the then-current dispatch instructions, and the session was logged
+  out for both tabs afterward — likely a refresh-token rotation race).
+  Fix: only the controller drives the browser (a single persistent tab,
+  sequential navigation), never a dispatched subagent; implementers write
+  code and self-verify via `tsc`/tests only, and the controller performs
+  any manual/browser verification step from the plan itself afterward,
+  reporting results back before the implementer commits.
+- **`.superpowers/sdd/<plan>/` (the SDD ledger, briefs, reports, review
+  packages) is gitignored** — it never leaves the machine it was created
+  on, even after the branch is pushed. Anything a resuming session on a
+  different device needs must live in this file instead, not only in the
+  ledger.
 
 ## Sub-projects 1–3: shipped
 
@@ -109,18 +132,36 @@ and `/transactions` screens with filtering. A few deferred-minor UI items
 (aria attributes, archived rows still appearing in filter dropdowns) were
 never revisited — low risk, worth a look if this area gets touched again.
 
-**2. Budgeting — spec + plan done, not yet executed.** Spec:
-`docs/superpowers/specs/2026-08-20-budgeting-design.md`. Plan (11 tasks):
-`docs/superpowers/plans/2026-08-20-budgeting.md`. Required weekly overall
-budget (Mon–Sun, highlighted, monthly/daily are ×4/÷7 projections,
-income-anchor leftover/warning, missed-week banner); optional
-per-category monthly budgets (unchanged from v1 design); new
+**2. Budgeting — IN PROGRESS**, executing via
+superpowers:subagent-driven-development in worktree branch
+`worktree-budgeting` (pushed to `origin/worktree-budgeting`, not yet
+merged). Spec: `docs/superpowers/specs/2026-08-20-budgeting-design.md`.
+Plan (11 tasks): `docs/superpowers/plans/2026-08-20-budgeting.md`.
+Required weekly overall budget (Mon–Sun, highlighted, monthly/daily are
+×4/÷7 projections, income-anchor leftover/warning, missed-week banner);
+optional per-category monthly budgets (unchanged from v1 design); new
 `recurring_constants` table that auto-posts income/expense rows on
-schedule via a catch-up check in `app/(app)/layout.tsx`. See the spec's
-§10 for explicit non-goals (real push notifications deferred, no
-per-category weekly granularity). Next: execute the plan via
-superpowers:subagent-driven-development in a dedicated worktree — the
-user asked for this to start in a fresh session, not this one.
+schedule via a catch-up check in `app/(app)/layout.tsx`.
+
+**Status as of 2026-08-20 end of session:** Tasks 1–6 complete, task-reviewed
+clean, committed (`3658617` schema, `5289f78` weekly-budget pure logic,
+`323a4b5`/`f088fcd` recurring pure logic + catch-up, `6ad2bcf` budget
+actions, `96f78fa` recurring actions). **Task 7** (`/budget` page +
+`WeeklyBudgetCard`/`ReminderBanner`, commit `c623e90`) is implemented and
+manually browser-verified by the controller (headline card, ×4/÷7 derived
+figures, income/leftover warning, prev/next week nav, past-week read-only
+state — all confirmed working live) **but its task review has not run
+yet.** Tasks 8–11 and the final whole-branch review have not started. See
+"How to resume in a new session" below for the exact next action.
+
+One human-approved deviation from the plan's literal code: Task 4's
+`postDueRecurringConstants` originally claimed a recurring occurrence
+(advanced `next_due_on`) and posted its transaction row as two non-atomic
+DB calls — if the insert failed right after the claim succeeded, the
+occurrence was silently and permanently lost. Fixed in `f088fcd` by
+reverting the claim on insert failure so a retry can recover it (the
+double-posting protection this task was originally scoped to verify was
+already correct and needed no change).
 
 **3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
 (fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
@@ -186,9 +227,9 @@ repo — pull it back up when sub-project 5 starts.
 
 In order:
 
-1. **Budgeting (sub-project 2).** Spec and plan both done (see above) —
-   needs execution via superpowers:subagent-driven-development in a
-   dedicated worktree.
+1. **Budgeting (sub-project 2).** IN PROGRESS — see status above. Resume
+   via superpowers:subagent-driven-development on branch
+   `worktree-budgeting`, starting with Task 7's task review.
 2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
    transaction management UI (today `portfolio_transactions` only has a
    read-only summary card on the dashboard — no way to add rows to it
@@ -203,17 +244,45 @@ superpowers:writing-plans) before code starts, then execute via
 superpowers:subagent-driven-development in a dedicated git worktree — same
 process used for Transactions core and Dashboard & Insights.
 
+**Also queued (user-requested 2026-08-20, deferred until Budgeting
+ships):** replace the bottom nav (Home/Transactions/Budget/Portfolio/
+Accounts) with a side nav that expands on hover. Deferred because the nav
+is shared shell chrome (`ShellChrome`) and Budgeting's own Task 11
+verifies the bottom nav stays present/active — swapping it mid-plan would
+break that check. Run superpowers:brainstorming first, not just a CSS
+change: this app is mobile-first (PWA, bottom nav chosen for one-thumb
+use, verified on a real iPhone) and hover has no touchscreen equivalent,
+so the desktop hover-expand behavior and a distinct mobile interaction
+(tap-to-expand, a drawer, or keeping the bottom nav on small screens) both
+need deciding with the user, not assumed.
+
 ## How to resume in a new session
 
 Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
 done and merged to `main` (live in production, Vercel auto-deploys on
-push). Sub-project 2 (Budgeting) has an approved design spec —
-`docs/superpowers/specs/2026-08-20-budgeting-design.md` — and an approved
-11-task implementation plan —
-`docs/superpowers/plans/2026-08-20-budgeting.md`. **Both are done; only
-execution is left.** Start a dedicated worktree (per
-superpowers:using-git-worktrees) and run the plan via
-superpowers:subagent-driven-development (same process used for
-Transactions core and Dashboard & Insights) — no more planning needed
-first. Full remaining sequence:
-`docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
+push). **Sub-project 2 (Budgeting) is mid-execution** — see its status
+block above. To resume, on any device:
+
+1. `git fetch origin`, then check out branch `worktree-budgeting` (either
+   directly or via a fresh `superpowers:using-git-worktrees` worktree
+   pointed at that branch — do NOT branch a new worktree off `main`, the
+   in-progress commits are only on `worktree-budgeting`).
+2. `npm install`, then `npx next typegen` (one-time per fresh worktree —
+   see the convention note below).
+3. Recreate `.env.local` — see "Live infrastructure" above, and the
+   `SEED_USER_EMAIL` gotcha in "Decisions / conventions worth knowing."
+4. The SDD ledger at `.superpowers/sdd/2026-08-20-budgeting/` is
+   gitignored and will NOT exist on a fresh checkout — this PROGRESS.md
+   status block is the authoritative resume point instead. Recreate the
+   ledger fresh (`# SDD ledger — plan: docs/superpowers/plans/2026-08-20-budgeting.md`
+   plus one `Task N: complete (...)` line per task 1–6, `c623e90` noted as
+   Task 7's implementation commit awaiting review) so
+   superpowers:subagent-driven-development's own bookkeeping stays
+   consistent, then continue via that skill: dispatch Task 7's task
+   reviewer first (brief: re-run `scripts/task-brief` for task 7; diff
+   range is the merge-base of `worktree-budgeting`..`main` through
+   `c623e90`), then proceed through Tasks 8–11 and the final whole-branch
+   review per the skill's normal process.
+5. Sub-project sequence after Budgeting ships: Portfolio (sub-project 4),
+   then Historical migration (sub-project 5) — full detail in
+   `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
