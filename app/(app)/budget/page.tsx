@@ -18,7 +18,7 @@ export default async function BudgetPage({
 
   const [weeklyBudgetsResult, incomeResult, expensesResult] = await Promise.all([
     supabase.from('weekly_budgets').select('week_start, planned_amount'),
-    supabase.from('income').select('occurred_on, amount'),
+    supabase.from('income').select('occurred_on, amount, is_adjustment'),
     supabase.from('expenses').select('occurred_on, amount, is_adjustment'),
   ])
 
@@ -36,7 +36,7 @@ export default async function BudgetPage({
     .filter((e) => !e.is_adjustment && e.occurred_on >= requestedWeek && e.occurred_on <= weekEnd)
     .reduce((sum, e) => sum + e.amount, 0)
   const incomeThisWeek = income
-    .filter((row) => row.occurred_on >= requestedWeek && row.occurred_on <= weekEnd)
+    .filter((row) => !row.is_adjustment && row.occurred_on >= requestedWeek && row.occurred_on <= weekEnd)
     .reduce((sum, row) => sum + row.amount, 0)
 
   const nextWeekStart = addDays(currentWeekStart, 7)
