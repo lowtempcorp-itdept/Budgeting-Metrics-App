@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
-import { todayInManila } from '@/lib/date'
+import { todayInManila, currentMonthInManila } from '@/lib/date'
 import { mondayOfWeek, addDays, needsNextWeekReminder } from '@/lib/weekly-budget'
 import { WeeklyBudgetCard } from './WeeklyBudgetCard'
 import { ReminderBanner } from './ReminderBanner'
+import { CategoryBudgetTable } from './CategoryBudgetTable'
 
 export default async function BudgetPage({
   searchParams,
@@ -16,19 +17,23 @@ export default async function BudgetPage({
 
   const supabase = await createClient()
 
-  const [weeklyBudgetsResult, incomeResult, expensesResult] = await Promise.all([
+  const [weeklyBudgetsResult, incomeResult, expensesResult, budgetsResult, categoriesResult] = await Promise.all([
     supabase.from('weekly_budgets').select('week_start, planned_amount'),
     supabase.from('income').select('occurred_on, amount, is_adjustment'),
-    supabase.from('expenses').select('occurred_on, amount, is_adjustment'),
+    supabase.from('expenses').select('occurred_on, amount, category_id, is_adjustment'),
+    supabase.from('budgets').select('month, category_id, planned_amount'),
+    supabase.from('categories').select('id, name, archived').order('name'),
   ])
 
-  for (const result of [weeklyBudgetsResult, incomeResult, expensesResult]) {
+  for (const result of [weeklyBudgetsResult, incomeResult, expensesResult, budgetsResult, categoriesResult]) {
     if (result.error) throw new Error(result.error.message)
   }
 
   const weeklyBudgets = weeklyBudgetsResult.data ?? []
   const income = incomeResult.data ?? []
   const expenses = expensesResult.data ?? []
+  const budgets = budgetsResult.data ?? []
+  const categories = categoriesResult.data ?? []
 
   const weekEnd = addDays(requestedWeek, 6)
   const plannedAmount = weeklyBudgets.find((w) => w.week_start === requestedWeek)?.planned_amount ?? null
@@ -43,6 +48,21 @@ export default async function BudgetPage({
   const nextWeekIsSet = weeklyBudgets.some((w) => w.week_start === nextWeekStart)
   const showReminder = requestedWeek === currentWeekStart && needsNextWeekReminder(today, currentWeekStart, nextWeekIsSet)
 
+  const currentMonth = currentMonthInManila()
+  const monthPrefix = currentMonth.slice(0, 7)
+  const categoryNames = new Map(categories.map((c) => [c.id, c.name]))
+  const monthBudgets = budgets.filter((b) => b.month === currentMonth)
+  const categoryBudgetRows = monthBudgets.map((b) => ({
+    categoryId: b.category_id,
+    categoryName: categoryNames.get(b.category_id) ?? 'Unknown',
+    planned: b.planned_amount,
+    actual: expenses
+      .filter((e) => !e.is_adjustment && e.category_id === b.category_id && e.occurred_on.startsWith(monthPrefix))
+      .reduce((sum, e) => sum + e.amount, 0),
+  }))
+  const budgetedCategoryIds = new Set(monthBudgets.map((b) => b.category_id))
+  const unbudgetedCategories = categories.filter((c) => !c.archived && !budgetedCategoryIds.has(c.id))
+
   return (
     <div className="space-y-4">
       {showReminder && <ReminderBanner nextWeekStart={nextWeekStart} />}
@@ -55,6 +75,7 @@ export default async function BudgetPage({
         incomeThisWeek={incomeThisWeek}
         isPastWeek={requestedWeek < currentWeekStart}
       />
+      <CategoryBudgetTable month={currentMonth} rows={categoryBudgetRows} unbudgetedCategories={unbudgetedCategories} />
     </div>
   )
 }
