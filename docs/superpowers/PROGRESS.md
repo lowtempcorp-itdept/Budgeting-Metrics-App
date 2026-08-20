@@ -109,15 +109,18 @@ and `/transactions` screens with filtering. A few deferred-minor UI items
 (aria attributes, archived rows still appearing in filter dropdowns) were
 never revisited — low risk, worth a look if this area gets touched again.
 
-**2. Budgeting — design spec done, plan not yet written.** Spec:
-`docs/superpowers/specs/2026-08-20-budgeting-design.md`. Required weekly
-overall budget (Mon–Sun, highlighted, monthly/daily are ×4/÷7
-projections, income-anchor leftover/warning, missed-week banner);
-optional per-category monthly budgets (unchanged from v1 design); new
+**2. Budgeting — spec + plan done, not yet executed.** Spec:
+`docs/superpowers/specs/2026-08-20-budgeting-design.md`. Plan (11 tasks):
+`docs/superpowers/plans/2026-08-20-budgeting.md`. Required weekly overall
+budget (Mon–Sun, highlighted, monthly/daily are ×4/÷7 projections,
+income-anchor leftover/warning, missed-week banner); optional
+per-category monthly budgets (unchanged from v1 design); new
 `recurring_constants` table that auto-posts income/expense rows on
 schedule via a catch-up check in `app/(app)/layout.tsx`. See the spec's
 §10 for explicit non-goals (real push notifications deferred, no
-per-category weekly granularity). Next: superpowers:writing-plans.
+per-category weekly granularity). Next: execute the plan via
+superpowers:subagent-driven-development in a dedicated worktree — the
+user asked for this to start in a fresh session, not this one.
 
 **3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
 (fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
@@ -183,9 +186,9 @@ repo — pull it back up when sub-project 5 starts.
 
 In order:
 
-1. **Budgeting (sub-project 2).** Design spec done (see above) — needs an
-   implementation plan via superpowers:writing-plans next, then execution
-   via superpowers:subagent-driven-development in a dedicated worktree.
+1. **Budgeting (sub-project 2).** Spec and plan both done (see above) —
+   needs execution via superpowers:subagent-driven-development in a
+   dedicated worktree.
 2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
    transaction management UI (today `portfolio_transactions` only has a
    read-only summary card on the dashboard — no way to add rows to it
@@ -205,9 +208,12 @@ process used for Transactions core and Dashboard & Insights.
 Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
 done and merged to `main` (live in production, Vercel auto-deploys on
 push). Sub-project 2 (Budgeting) has an approved design spec —
-`docs/superpowers/specs/2026-08-20-budgeting-design.md` — but **no
-implementation plan yet**. Start with superpowers:writing-plans reading
-that spec, then execute via superpowers:subagent-driven-development in a
-dedicated worktree (same process used for Transactions core and
-Dashboard & Insights). Full remaining sequence:
+`docs/superpowers/specs/2026-08-20-budgeting-design.md` — and an approved
+11-task implementation plan —
+`docs/superpowers/plans/2026-08-20-budgeting.md`. **Both are done; only
+execution is left.** Start a dedicated worktree (per
+superpowers:using-git-worktrees) and run the plan via
+superpowers:subagent-driven-development (same process used for
+Transactions core and Dashboard & Insights) — no more planning needed
+first. Full remaining sequence:
 `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
