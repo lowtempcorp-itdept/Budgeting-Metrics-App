@@ -41,8 +41,6 @@ export function RecurringConstantsList({
     })
   }
 
-  const editingRecord = editingId && editingId !== 'new' ? constants.find((c) => c.id === editingId) ?? null : null
-
   return (
     <details className="rounded-lg border border-slate-200 bg-white p-4" open>
       <summary className="cursor-pointer text-sm font-medium text-slate-700">Recurring constants</summary>

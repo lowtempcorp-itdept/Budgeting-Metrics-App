@@ -91,7 +91,7 @@ export function WeeklyBudgetCard({
 
           {!isPastWeek && (
             <details className="mt-3 text-center text-sm">
-              <summary className="cursor-pointer text-slate-500">Change this week's budget</summary>
+              <summary className="cursor-pointer text-slate-500">Change this week&apos;s budget</summary>
               <form action={setWeeklyBudget.bind(null, weekStart)} className="mt-2 flex gap-2">
                 <input
                   name="amount"
