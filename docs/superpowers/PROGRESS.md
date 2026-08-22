@@ -117,7 +117,7 @@ exemption, FK constraint conflicts) — full detail in git history
   different device needs must live in this file instead, not only in the
   ledger.
 
-## Sub-projects 1–3: shipped
+## Sub-projects 1–3: 1 and 3 shipped, 2 implementation-complete
 
 Post-foundation UI work is broken into 5 sub-projects, built out of strict
 order (Dashboard & Insights got an early design pass and shipped 3rd
@@ -132,36 +132,46 @@ and `/transactions` screens with filtering. A few deferred-minor UI items
 (aria attributes, archived rows still appearing in filter dropdowns) were
 never revisited — low risk, worth a look if this area gets touched again.
 
-**2. Budgeting — IN PROGRESS**, executing via
-superpowers:subagent-driven-development in worktree branch
-`worktree-budgeting` (pushed to `origin/worktree-budgeting`, not yet
-merged). Spec: `docs/superpowers/specs/2026-08-20-budgeting-design.md`.
+**2. Budgeting — ✅ Implementation complete** (all 11 tasks shipped,
+task-reviewed clean), executing via superpowers:subagent-driven-development
+in worktree branch `worktree-budgeting` (pushed to
+`origin/worktree-budgeting`, **not yet merged to `main`** — the final
+whole-branch review is the next step; see "How to resume in a new session"
+below). Spec: `docs/superpowers/specs/2026-08-20-budgeting-design.md`.
 Plan (11 tasks): `docs/superpowers/plans/2026-08-20-budgeting.md`.
-Required weekly overall budget (Mon–Sun, highlighted, monthly/daily are
-×4/÷7 projections, income-anchor leftover/warning, missed-week banner);
-optional per-category monthly budgets (unchanged from v1 design); new
-`recurring_constants` table that auto-posts income/expense rows on
-schedule via a catch-up check in `app/(app)/layout.tsx`.
 
-**Status as of 2026-08-20 end of session:** Tasks 1–6 complete, task-reviewed
-clean, committed (`3658617` schema, `5289f78` weekly-budget pure logic,
-`323a4b5`/`f088fcd` recurring pure logic + catch-up, `6ad2bcf` budget
-actions, `96f78fa` recurring actions). **Task 7** (`/budget` page +
-`WeeklyBudgetCard`/`ReminderBanner`, commit `c623e90`) is implemented and
-manually browser-verified by the controller (headline card, ×4/÷7 derived
-figures, income/leftover warning, prev/next week nav, past-week read-only
-state — all confirmed working live) **but its task review has not run
-yet.** Tasks 8–11 and the final whole-branch review have not started. See
-"How to resume in a new session" below for the exact next action.
+Shipped: a required weekly overall budget (Mon–Sun, headline card, ×4/÷7
+derived monthly/daily figures, income-anchor leftover/warning, missed-week
+reminder banner, prev/next week navigation, past-week read-only state);
+optional per-category monthly budgets (planned/actual/difference table,
+unchanged from v1 design); a `recurring_constants` table (taxes,
+subscriptions, salary) that auto-posts real income/expense rows on schedule
+via a catch-up check in `app/(app)/layout.tsx`, plus full add/edit/pause/
+delete management UI; a new "weekly-budget-pace" dashboard insight.
+`lib/weekly-budget.ts` and `lib/recurring.ts` are new, unit-tested,
+pure-function modules following the established `lib/insights.ts` pattern.
 
-One human-approved deviation from the plan's literal code: Task 4's
+Two real bugs were caught by Task 11's final regression pass (not by any
+per-task review) and fixed before this doc update: an unescaped apostrophe
+tripping `react/no-unescaped-entities` in `WeeklyBudgetCard.tsx`, and a
+mobile-viewport horizontal-overflow bug in `CategoryBudgetTable.tsx` — its
+unbudgeted-category row (fixed-width label + `flex-1` amount input + button,
+no `min-w-0`) overflowed ~19px on a 390px-wide screen because flex items
+default to `min-width: auto`, so the input refused to shrink far enough.
+Fixed by adding `min-w-0` to the input. Worth remembering for any future
+`flex` row here that pairs a `flex-1` input with fixed-width siblings.
+
+One human-approved deviation from the plan's literal code during Task 4:
 `postDueRecurringConstants` originally claimed a recurring occurrence
 (advanced `next_due_on`) and posted its transaction row as two non-atomic
 DB calls — if the insert failed right after the claim succeeded, the
 occurrence was silently and permanently lost. Fixed in `f088fcd` by
-reverting the claim on insert failure so a retry can recover it (the
-double-posting protection this task was originally scoped to verify was
-already correct and needed no change).
+reverting the claim on insert failure so a retry can recover it. One other
+human-adjudicated finding during Task 7's review: the plan's own sample
+code excluded balance-adjustment rows (`is_adjustment`) from the weekly
+"spent so far" total but not from "income this week," an asymmetry that
+would have let an income-side adjustment inflate the leftover figure —
+fixed to filter both sides consistently.
 
 **3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
 (fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
@@ -227,9 +237,11 @@ repo — pull it back up when sub-project 5 starts.
 
 In order:
 
-1. **Budgeting (sub-project 2).** IN PROGRESS — see status above. Resume
-   via superpowers:subagent-driven-development on branch
-   `worktree-budgeting`, starting with Task 7's task review.
+1. **Merge Budgeting (sub-project 2) to `main`.** Implementation is
+   complete on `worktree-budgeting` — see status above. Remaining: the
+   final whole-branch review (superpowers:subagent-driven-development's
+   last step) and superpowers:finishing-a-development-branch to decide how
+   it lands.
 2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
    transaction management UI (today `portfolio_transactions` only has a
    read-only summary card on the dashboard — no way to add rows to it
@@ -260,29 +272,26 @@ need deciding with the user, not assumed.
 
 Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
 done and merged to `main` (live in production, Vercel auto-deploys on
-push). **Sub-project 2 (Budgeting) is mid-execution** — see its status
-block above. To resume, on any device:
+push). **Sub-project 2 (Budgeting) has all 11 tasks implemented and
+task-reviewed clean on `worktree-budgeting`, but is not yet merged** — see
+its status block above for what shipped and the two bugs Task 11's final
+regression pass caught and fixed. To resume, on any device:
 
 1. `git fetch origin`, then check out branch `worktree-budgeting` (either
    directly or via a fresh `superpowers:using-git-worktrees` worktree
-   pointed at that branch — do NOT branch a new worktree off `main`, the
-   in-progress commits are only on `worktree-budgeting`).
+   pointed at that branch — do NOT branch a new worktree off `main`).
 2. `npm install`, then `npx next typegen` (one-time per fresh worktree —
-   see the convention note below).
+   see the convention note above).
 3. Recreate `.env.local` — see "Live infrastructure" above, and the
    `SEED_USER_EMAIL` gotcha in "Decisions / conventions worth knowing."
 4. The SDD ledger at `.superpowers/sdd/2026-08-20-budgeting/` is
-   gitignored and will NOT exist on a fresh checkout — this PROGRESS.md
-   status block is the authoritative resume point instead. Recreate the
-   ledger fresh (`# SDD ledger — plan: docs/superpowers/plans/2026-08-20-budgeting.md`
-   plus one `Task N: complete (...)` line per task 1–6, `c623e90` noted as
-   Task 7's implementation commit awaiting review) so
-   superpowers:subagent-driven-development's own bookkeeping stays
-   consistent, then continue via that skill: dispatch Task 7's task
-   reviewer first (brief: re-run `scripts/task-brief` for task 7; diff
-   range is the merge-base of `worktree-budgeting`..`main` through
-   `c623e90`), then proceed through Tasks 8–11 and the final whole-branch
-   review per the skill's normal process.
-5. Sub-project sequence after Budgeting ships: Portfolio (sub-project 4),
+   gitignored and won't exist on a fresh checkout. If the final
+   whole-branch review hasn't run yet, recreate the ledger (`# SDD
+   ledger — plan: docs/superpowers/plans/2026-08-20-budgeting.md` plus one
+   `Task N: complete (...)` line per task 1–11 — this file's git history
+   has the commit ranges) and continue superpowers:subagent-driven-development
+   at its final-review step, then superpowers:finishing-a-development-branch
+   to land the branch.
+5. Sub-project sequence after Budgeting merges: Portfolio (sub-project 4),
    then Historical migration (sub-project 5) — full detail in
    `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
