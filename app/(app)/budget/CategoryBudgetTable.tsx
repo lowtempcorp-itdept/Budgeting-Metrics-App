@@ -67,7 +67,7 @@ export function CategoryBudgetTable({
                   min="0.01"
                   required
                   placeholder="Planned amount"
-                  className="flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                  className="min-w-0 flex-1 rounded border border-slate-300 px-2 py-1.5 text-sm"
                 />
                 <button type="submit" className="rounded bg-slate-900 px-3 py-1.5 text-sm text-white hover:bg-slate-700">
                   Add
