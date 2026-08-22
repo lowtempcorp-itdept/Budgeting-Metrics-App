@@ -26,9 +26,8 @@ every route, idempotent seed script (4 accounts, 22 categories), PWA
 manifest + service worker, mobile nav shell.
 
 4 bugs in the plan's own sample code were caught and fixed during
-implementation (cookie handling in `proxy.ts`, seed idempotency, PWA icon
-exemption, FK constraint conflicts) — full detail in git history
-(`31b47b5..8767667`) if this plan is ever re-run from scratch.
+implementation — full detail in git history (`31b47b5..8767667`) if this
+plan is ever re-run from scratch.
 
 ## Live infrastructure
 
@@ -89,18 +88,14 @@ exemption, FK constraint conflicts) — full detail in git history
   directly into the committed spec/plan docs in `docs/superpowers/`,
   never leave a doc pointing at memory as the only copy of a decision.
 - **Local `main` can silently fall behind `origin/main`** across
-  sessions/devices (found 64 commits behind on 2026-08-20, all real
-  already-pushed work, fast-forwarded cleanly). Run `git fetch` and check
-  `git status` against `origin/main` at the start of any new session
-  before trusting local git log.
+  sessions/devices. Run `git fetch` and check `git status` against
+  `origin/main` at the start of any new session before trusting local git
+  log.
 - **The real `SEED_USER_EMAIL` is `lowtempcorp.it@gmail.com`** — not the
   Claude-account email shown in session context. A fresh worktree's
   `.env.local` is gitignored and won't exist until recreated (copy from
-  another local worktree's `.env.local` if one exists on the same
-  machine, or from the Supabase dashboard) — a 2026-08-20 session copied
-  one forward from an old worktree that was missing `SEED_USER_EMAIL`
-  entirely and had to ask the human to supply the correct value after an
-  incorrect first guess.
+  another local worktree's `.env.local` on the same machine, or from the
+  Supabase dashboard).
 - **A subagent opening its own Claude-in-Chrome tab can invalidate the
   shared Supabase auth session** (observed 2026-08-20 during the
   Budgeting build: the human logged in, a subagent created a second tab
@@ -173,35 +168,51 @@ code excluded balance-adjustment rows (`is_adjustment`) from the weekly
 would have let an income-side adjustment inflate the leftover figure —
 fixed to filter both sides consistently.
 
+The final whole-branch review (separate from Task 11's own regression
+pass) found two more Critical, plan-traceable bugs, human-approved and
+fixed before merge: (1) the `income`/`expenses` → `recurring_constants`
+foreign keys were `on delete no action deferrable initially deferred`,
+which only protects the same-transaction user-deletion cascade
+(`0003_defer_child_fk_constraints.sql`'s reason for existing) — a
+standalone delete of one constant with surviving posted transactions threw
+a FK violation, breaking the Delete button for any constant that had ever
+auto-posted; fixed via `supabase/migrations/0006_recurring_constant_delete_set_null.sql`
+(`on delete set null`, applied to the live DB and verified). (2)
+`updateRecurringConstant` unconditionally recomputed `next_due_on` using
+the *creation*-path logic on every edit, so editing a constant (even just
+its amount) on its own due date rewound `next_due_on` back to today and
+caused a duplicate transaction on the next catch-up run; fixed to only
+recompute when the schedule itself changed, advancing one further period
+if the recompute would otherwise land at-or-before today. Both fixes
+verified live end-to-end (post → delete succeeds with history intact;
+post → edit → no duplicate on next catch-up).
+
+**Deliberately deferred, not blocking this merge** — real gaps worth a
+follow-up task: the catch-up has no error handling, so a persistent DB
+error there would 500 every authenticated page with no way to reach
+`/budget` to fix it; the next due date is never shown in the recurring
+constants list despite the design spec calling for it; resuming a paused
+constant (only possible via the Supabase table editor today) immediately
+back-fills every missed occurrence instead of skipping them; a narrow
+read-then-write race in `updateRecurringConstant` if the catch-up advances
+`next_due_on` concurrently (low-probability, single-user app); and Minor
+UI polish (no red styling on an overspent "remaining" line, a notes-less
+expense constant displays as generic "Expense," no inline category-budget
+edit, and the weekly-budget-pace insight is hidden whenever it's the only
+insight, per the dashboard's pre-existing 2-insight minimum).
+
 **3. Dashboard & Insights — ✅ COMPLETE**, merged to `main` 2026-08-20
-(fast-forward, `31eff7d..7eb3a7f`), pushed to `origin/main` (Vercel
-auto-deploys on push). Plan:
-`docs/superpowers/plans/2026-08-19-dashboard-insights.md` (10 tasks, all
-implemented via superpowers:subagent-driven-development in a dedicated
-worktree, all task-level reviews clean, final whole-branch review clean
-after one fix round — 1 Critical finding, bottom-nav text nearly
-invisible on the new dark Home tab at 1.07:1 contrast, plus a few
-Important/Minor spec-compliance gaps, all fixed and re-reviewed). Design:
+(fast-forward, `31eff7d..7eb3a7f`). Plan:
+`docs/superpowers/plans/2026-08-19-dashboard-insights.md` (10 tasks, final
+whole-branch review clean after one fix round). Design:
 `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md`.
 
 Shipped: the real `/dashboard` page — auto-generated insights (5 rule
-types, each independently omittable), account-balance cards, a portfolio
-net-per-ticker summary, month-to-date category spending bars, an
-income/expense trend chart (3/6/9/12-month selector, hover crosshair,
-SVG), and a reusable motion system (hover-grow, press-shrink, count-up,
-staggered entrance) — plus a dark-mode-only shell chrome that activates
-only on the Home tab. No schema changes; entirely read-only against the
-database. `lib/insights.ts`, `lib/trend.ts`, `lib/portfolio.ts`,
+types), account-balance cards, a portfolio net-per-ticker summary,
+month-to-date category spending bars, an income/expense trend chart, and
+a dark-mode-only shell chrome on the Home tab. Read-only, no schema
+changes. `lib/insights.ts`, `lib/trend.ts`, `lib/portfolio.ts`,
 `lib/motion.ts` are new, unit-tested, pure-function modules.
-
-One real, human-adjudicated finding during the build: the plan's own
-sample code repurposed the reserved income-green (`#6cd3a5`) as a
-decorative rotating color in two places (account-card badges, portfolio
-ticker dots) — a direct conflict with its own Global Constraint that
-green/red are reserved for income/expense polarity only. Fixed to a
-neutral slate (`#9aa3b8`) in both places per an explicit human decision
-mid-build. Everything else implemented clean, or with only Minor/deferred
-findings — none load-bearing.
 
 Live site currently shows an all-empty dashboard (₱0 everywhere, "add
 more transactions" fallbacks) because the real production database has
@@ -237,11 +248,10 @@ repo — pull it back up when sub-project 5 starts.
 
 In order:
 
-1. **Merge Budgeting (sub-project 2) to `main`.** Implementation is
-   complete on `worktree-budgeting` — see status above. Remaining: the
-   final whole-branch review (superpowers:subagent-driven-development's
-   last step) and superpowers:finishing-a-development-branch to decide how
-   it lands.
+1. **Merge Budgeting (sub-project 2) to `main`.** Implementation and
+   review are both complete on `worktree-budgeting` — see status above.
+   Remaining: superpowers:finishing-a-development-branch to decide how it
+   lands.
 2. **Portfolio (sub-project 4).** Full buy/sell/deposit/withdraw
    transaction management UI (today `portfolio_transactions` only has a
    read-only summary card on the dashboard — no way to add rows to it
@@ -271,11 +281,11 @@ need deciding with the user, not assumed.
 ## How to resume in a new session
 
 Sub-projects 1 and 3 (Transactions core, Dashboard & Insights) are both
-done and merged to `main` (live in production, Vercel auto-deploys on
-push). **Sub-project 2 (Budgeting) has all 11 tasks implemented and
-task-reviewed clean on `worktree-budgeting`, but is not yet merged** — see
-its status block above for what shipped and the two bugs Task 11's final
-regression pass caught and fixed. To resume, on any device:
+done and merged to `main`. **Sub-project 2 (Budgeting) is fully
+implemented and reviewed clean on `worktree-budgeting`** — all 11 tasks
+plus the final whole-branch review and its fix wave are done (see status
+block above); only superpowers:finishing-a-development-branch's merge
+decision remains. To resume, on any device:
 
 1. `git fetch origin`, then check out branch `worktree-budgeting` (either
    directly or via a fresh `superpowers:using-git-worktrees` worktree
@@ -284,14 +294,9 @@ regression pass caught and fixed. To resume, on any device:
    see the convention note above).
 3. Recreate `.env.local` — see "Live infrastructure" above, and the
    `SEED_USER_EMAIL` gotcha in "Decisions / conventions worth knowing."
-4. The SDD ledger at `.superpowers/sdd/2026-08-20-budgeting/` is
-   gitignored and won't exist on a fresh checkout. If the final
-   whole-branch review hasn't run yet, recreate the ledger (`# SDD
-   ledger — plan: docs/superpowers/plans/2026-08-20-budgeting.md` plus one
-   `Task N: complete (...)` line per task 1–11 — this file's git history
-   has the commit ranges) and continue superpowers:subagent-driven-development
-   at its final-review step, then superpowers:finishing-a-development-branch
-   to land the branch.
-5. Sub-project sequence after Budgeting merges: Portfolio (sub-project 4),
-   then Historical migration (sub-project 5) — full detail in
+4. If not yet merged: run superpowers:finishing-a-development-branch to
+   decide how the branch lands (the SDD workspace under `.superpowers/sdd/`
+   is gitignored scratch and has already been deleted — this file is the
+   record). If already merged: start Portfolio (sub-project 4), then
+   Historical migration (sub-project 5) — full detail in
    `docs/superpowers/specs/2026-08-19-dashboard-insights-design.md` §11.
