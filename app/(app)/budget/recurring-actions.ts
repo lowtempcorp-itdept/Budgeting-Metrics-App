@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { computeInitialNextDueOn, type RecurringFrequency } from '@/lib/recurring'
+import { computeInitialNextDueOn, advanceNextDueOn, type RecurringFrequency } from '@/lib/recurring'
 import { todayInManila } from '@/lib/date'
 
 export type RecurringConstantFormState = {
@@ -131,10 +131,36 @@ export async function updateRecurringConstant(
   const parsed = parseFields(formData)
   if (!parsed.ok) return { error: parsed.error, submitted: true }
 
-  // Editing only ever affects future occurrences: recompute next_due_on
-  // from today under the new schedule, exactly like creation, instead of
-  // reusing whatever next_due_on the old schedule left behind.
-  const nextDueOn = computeInitialNextDueOn(parsed.frequency, parsed.dayOfMonth, parsed.monthOfYear, todayInManila())
+  const { data: existing, error: fetchError } = await supabase
+    .from('recurring_constants')
+    .select('frequency, day_of_month, month_of_year, next_due_on')
+    .eq('id', id)
+    .single()
+  if (fetchError) return { error: fetchError.message, submitted: true }
+
+  // Editing only ever affects future occurrences. If the schedule itself
+  // didn't change, next_due_on must not be touched — recomputing it
+  // unconditionally would rewind an already-advanced date (e.g. the
+  // catch-up just posted today's occurrence and moved next_due_on
+  // forward) back to today, causing a duplicate post on the very next
+  // page load. If the schedule did change, recompute it fresh — but if
+  // that recompute would land today-or-earlier while the stored value was
+  // still in the future, advance one more period instead of re-arming an
+  // occurrence for immediate re-posting.
+  const scheduleChanged =
+    existing.frequency !== parsed.frequency ||
+    existing.day_of_month !== parsed.dayOfMonth ||
+    existing.month_of_year !== parsed.monthOfYear
+
+  let nextDueOn = existing.next_due_on
+  if (scheduleChanged) {
+    const today = todayInManila()
+    const recomputed = computeInitialNextDueOn(parsed.frequency, parsed.dayOfMonth, parsed.monthOfYear, today)
+    nextDueOn =
+      recomputed <= today && existing.next_due_on > today
+        ? advanceNextDueOn(recomputed, parsed.frequency, parsed.dayOfMonth, parsed.monthOfYear)
+        : recomputed
+  }
 
   const { error } = await supabase
     .from('recurring_constants')
